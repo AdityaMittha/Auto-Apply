@@ -22,7 +22,8 @@ function loadEnv(file) {
 const E = loadEnv(path.join(__dirname, '.env'));
 const g = (k, d = '') => (E[k] != null && E[k] !== '' ? E[k] : (process.env[k] || d));
 
-if (!g('NAME') || !g('EMAIL')) {
+// the refresh script only needs GOOGLE_EMAIL/GOOGLE_PASSWORD; CV fields feed the apply scripts
+if (!g('GOOGLE_EMAIL') && !g('EMAIL')) {
   console.warn('[config] .env missing or empty — copy .env.example to .env and fill it in.');
 }
 

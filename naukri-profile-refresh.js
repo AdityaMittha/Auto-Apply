@@ -19,6 +19,12 @@ const LOG_FILE = path.join(__dirname, 'naukri-refresh.log');
 const ERROR_SHOT = path.join(__dirname, 'naukri-refresh-error.png');
 const LOGIN_MODE = process.argv[2] === 'login';
 
+// fail fast with a clear message instead of a cryptic login timeout later
+if (!CREDS.email || !CREDS.password) {
+  console.error('Missing credentials: copy .env.example to .env and fill in GOOGLE_EMAIL and GOOGLE_PASSWORD.');
+  process.exit(1);
+}
+
 const log = (msg) => {
   const line = `[${new Date().toLocaleString()}] ${msg}`;
   console.log(line);
