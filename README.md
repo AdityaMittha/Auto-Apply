@@ -1,82 +1,112 @@
 # Naukri Profile Refresh
 
-Keeps your Naukri profile marked **"recently updated"** automatically. Each run
-opens your Naukri profile and toggles a trailing `.` on the resume headline —
-headline ends with a dot → remove it, otherwise add it. Recruiters sorting by
-"recently active" always see your profile near the top.
+Keeps your Naukri profile "recently updated" — recruiters see fresh profiles first.
+Every run it toggles a trailing `.` on your **resume headline**, which counts as a
+profile update on Naukri. Schedule it hourly and forget about it.
 
-Every run verifies the save actually stuck by reloading the profile from the
-server. Login is automatic (Google sign-in) with a persistent Chrome profile,
-so you only approve 2-step verification once.
+- Logs in automatically with your **Google account** (session is saved after the first login).
+- Runs in an off-screen Chrome window (Naukri blocks headless browsers).
+- Verifies the save actually stuck on the server before reporting success.
+- All personal data lives in `.env` — nothing sensitive is in the code.
 
-## Prerequisites
+## Requirements
 
-- **Node.js 18+** (with npm)
-- **Google Chrome** installed (the script drives your real Chrome — Naukri's
-  bot-check blocks headless browsers)
-- **Windows 10/11** (for the hidden-launcher automation; the script itself is cross-platform)
-- A **Naukri account linked to Google sign-in** (the auto-login uses the
-  "Sign in with Google" button)
+- Windows 10/11 (uses Task Scheduler for the hourly run)
+- [Node.js](https://nodejs.org/) 18+
+- Google Chrome installed
+- A Naukri account that signs in with Google
 
 ## Setup
 
-```bash
+**1. Clone and install:**
+
+```powershell
 git clone https://github.com/ankitbaghel01/naukri_update.git
 cd naukri_update
 npm install
-
-# create your .env from the template:
-copy .env.example .env     # Windows (cmd)
-cp .env.example .env       # macOS / Linux / Git Bash
 ```
 
-Open `.env` and fill in **GOOGLE_EMAIL** and **GOOGLE_PASSWORD** — that's all
-this script needs. (The other fields in the template are used by companion
-auto-apply scripts and can be left as-is.)
+**2. Create your `.env`:**
 
-First run — visible browser window so you can approve Google 2-step
-verification once:
-
-```bash
-npm run login
+```powershell
+copy .env.example .env
 ```
 
-After that, the session is saved in `.naukri-chrome-profile/` and every
-future run is fully automatic:
+Open `.env` and fill in at least:
 
-```bash
-npm run refresh
+| Variable | What it is |
+|---|---|
+| `GOOGLE_EMAIL` | The Google account your Naukri profile uses |
+| `GOOGLE_PASSWORD` | Its password (used only for the automated sign-in) |
+| `NAUKRI_PROFILE_URL` | Your Naukri profile page — the default `https://www.naukri.com/mnjuser/profile` works for every account |
+
+`.env` is git-ignored, so your credentials never get pushed.
+
+**3. First login (one time, visible browser):**
+
+```powershell
+node naukri-profile-refresh.js login
 ```
 
-## Automate — refresh every hour (Windows Task Scheduler)
+A Chrome window opens and signs in with Google. If Google asks for 2-step
+verification, approve it once — the session is saved to `.naukri-chrome-profile/`
+and reused by every later run.
 
-1. Open `naukri-refresh-hidden.vbs` and edit the two paths at the top
-   (your `node.exe` location and where you cloned this repo).
-2. Open **Task Scheduler** (Win+R → `taskschd.msc`).
-3. **Create Basic Task** → name it "Naukri Refresh".
-4. Trigger: **Daily**, then after finishing open the task → **Triggers** tab →
-   Edit → check **Repeat task every: 1 hour** for a duration of **Indefinitely**.
-5. Action: **Start a program** →
-   - Program/script: `wscript.exe`
-   - Arguments: `"C:\path\to\naukri_update\naukri-refresh-hidden.vbs"`
-6. Save. The script now runs hourly with **no visible window** — Chrome runs
-   headed but positioned off-screen.
+**4. Test a silent run:**
 
-## Logs & troubleshooting
+```powershell
+node naukri-profile-refresh.js
+```
 
-- Every run appends to `naukri-refresh.log`:
-  `OK: headline dot added (verified) → "..."`
-- Task Scheduler runs also capture console output in `naukri-launcher.log`
-  (useful when the script crashes before it can write its own log).
-- Failures save screenshots as `naukri-refresh-error-*.png`.
-- If login breaks (e.g. Google asks for verification again), run
-  `npm run login` once and approve it manually.
+Check `naukri-refresh.log` — you should see a line like:
+
+```
+[27/7/2026, 1:05:12 pm] OK: headline dot added (verified) → "AI Full Stack Developer | ..."
+```
+
+## Run it hourly (Task Scheduler)
+
+Run this once in PowerShell (adjust the path to where you cloned the repo):
+
+```powershell
+$repo = "C:\path\to\auto-apply"
+$action  = New-ScheduledTaskAction -Execute "node.exe" -Argument "`"$repo\naukri-profile-refresh.js`"" -WorkingDirectory $repo
+$trigger = New-ScheduledTaskTrigger -Once -At (Get-Date) -RepetitionInterval (New-TimeSpan -Hours 1)
+Register-ScheduledTask -TaskName "NaukriProfileRefresh" -Action $action -Trigger $trigger -Settings (New-ScheduledTaskSettingsSet -StartWhenAvailable)
+```
+
+That's it — the script now refreshes your profile every hour while your PC is on.
+
+Useful commands:
+
+```powershell
+Get-ScheduledTask NaukriProfileRefresh            # check status
+Start-ScheduledTask NaukriProfileRefresh          # run now
+Disable-ScheduledTask NaukriProfileRefresh        # pause
+Enable-ScheduledTask NaukriProfileRefresh         # resume
+Unregister-ScheduledTask NaukriProfileRefresh     # remove
+```
+
+## Troubleshooting
+
+| Symptom | Fix |
+|---|---|
+| `Google login did not complete` in the log | Run `node naukri-profile-refresh.js login` and approve the 2-step verification prompt once manually. |
+| `save did not stick` in the log | Naukri changed its headline editor — open an issue. |
+| Any other error | Check `naukri-refresh-error-*.png` screenshots in the repo folder — they show exactly what the browser saw when it failed. |
+| Want to start fresh | Delete the `.naukri-chrome-profile/` folder and run the `login` step again. |
 
 ## Files
 
 | File | Purpose |
-|------|---------|
-| `naukri-profile-refresh.js` | The refresh script (dot toggle + auto-login + save verification) |
-| `config.js` | Loads credentials from `.env` — nothing sensitive lives in code |
+|---|---|
+| `naukri-profile-refresh.js` | The refresh script |
+| `config.js` | Loads `.env` (no dependencies) |
 | `.env.example` | Template — copy to `.env` and fill in |
-| `naukri-refresh-hidden.vbs` | Hidden launcher for Task Scheduler (no console window) |
+| `naukri-refresh.log` | Run history (git-ignored) |
+| `.naukri-chrome-profile/` | Saved Chrome session (git-ignored) |
+
+## Disclaimer
+
+Automating your own profile may be against Naukri's Terms of Service. It only
+edits your own headline at a slow, human-like rate, but use at your own risk.

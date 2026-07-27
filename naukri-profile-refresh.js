@@ -12,18 +12,15 @@
 const { chromium } = require('playwright-core');
 const path = require('path');
 const fs = require('fs');
-const { CREDS } = require('./config'); // credentials come from .env, never hard-coded
+const { CREDS, naukriProfileUrl } = require('./config'); // credentials + profile URL come from .env, never hard-coded
+
+const PROFILE_URL = naukriProfileUrl;
+const LOGIN_URL = `https://www.naukri.com/nlogin/login?URL=${PROFILE_URL}`;
 
 const PROFILE_DIR = path.join(__dirname, '.naukri-chrome-profile');
 const LOG_FILE = path.join(__dirname, 'naukri-refresh.log');
 const ERROR_SHOT = path.join(__dirname, 'naukri-refresh-error.png');
 const LOGIN_MODE = process.argv[2] === 'login';
-
-// fail fast with a clear message instead of a cryptic login timeout later
-if (!CREDS.email || !CREDS.password) {
-  console.error('Missing credentials: copy .env.example to .env and fill in GOOGLE_EMAIL and GOOGLE_PASSWORD.');
-  process.exit(1);
-}
 
 const log = (msg) => {
   const line = `[${new Date().toLocaleString()}] ${msg}`;
@@ -35,7 +32,7 @@ const onProfile = (url) => url.pathname.startsWith('/mnjuser');
 
 async function googleLogin(ctx, page) {
   log('Session gone — signing in with Google...');
-  await page.goto('https://www.naukri.com/nlogin/login?URL=https://www.naukri.com/mnjuser/profile', {
+  await page.goto(LOGIN_URL, {
     waitUntil: 'domcontentloaded', timeout: 60000,
   });
 
@@ -81,7 +78,7 @@ async function googleLogin(ctx, page) {
     if (done) { log('Google login OK, session saved.'); return done; }
     if (g.isClosed() || /naukri\.com/.test(g.url())) {
       // auth finished but landed elsewhere — go to the profile directly
-      await page.goto('https://www.naukri.com/mnjuser/profile', { waitUntil: 'domcontentloaded', timeout: 60000 }).catch(() => {});
+      await page.goto(PROFILE_URL, { waitUntil: 'domcontentloaded', timeout: 60000 }).catch(() => {});
       if (onProfile(new URL(page.url()))) { log('Google login OK, session saved.'); return page; }
     }
     await page.waitForTimeout(2000);
@@ -105,14 +102,14 @@ async function googleLogin(ctx, page) {
   let page = ctx.pages()[0] || (await ctx.newPage());
 
   try {
-    await page.goto('https://www.naukri.com/mnjuser/profile', { waitUntil: 'domcontentloaded', timeout: 60000 });
+    await page.goto(PROFILE_URL, { waitUntil: 'domcontentloaded', timeout: 60000 });
 
     if (!onProfile(new URL(page.url()))) {
       page = await googleLogin(ctx, page);
     }
     // login may land on /mnjuser/homepage — make sure we're on the profile itself
     if (!/\/mnjuser\/profile/.test(page.url())) {
-      await page.goto('https://www.naukri.com/mnjuser/profile', { waitUntil: 'domcontentloaded', timeout: 60000 });
+      await page.goto(PROFILE_URL, { waitUntil: 'domcontentloaded', timeout: 60000 });
     }
 
     // Resume headline widget → pencil icon → textarea → save
@@ -130,7 +127,7 @@ async function googleLogin(ctx, page) {
     await textarea.waitFor({ state: 'hidden', timeout: 15000 });
 
     // modal closing isn't proof the save stuck — reload from the server and re-read
-    await page.goto('https://www.naukri.com/mnjuser/profile', { waitUntil: 'domcontentloaded', timeout: 60000 });
+    await page.goto(PROFILE_URL, { waitUntil: 'domcontentloaded', timeout: 60000 });
     await editIcon.first().waitFor({ timeout: 30000 });
     await editIcon.first().click();
     await textarea.waitFor({ timeout: 15000 });
