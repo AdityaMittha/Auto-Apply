@@ -12,7 +12,7 @@
 const { chromium } = require('playwright-core');
 const path = require('path');
 const fs = require('fs');
-const { CREDS, naukriProfileUrl } = require('./config'); // credentials + profile URL come from .env, never hard-coded
+const { CREDS, CV, naukriProfileUrl } = require('./config'); // credentials + profile URL come from .env, never hard-coded
 
 const PROFILE_URL = naukriProfileUrl;
 const LOGIN_URL = `https://www.naukri.com/nlogin/login?URL=${PROFILE_URL}`;
@@ -20,7 +20,7 @@ const LOGIN_URL = `https://www.naukri.com/nlogin/login?URL=${PROFILE_URL}`;
 const PROFILE_DIR = path.join(__dirname, '.naukri-chrome-profile');
 const LOG_FILE = path.join(__dirname, 'naukri-refresh.log');
 const ERROR_SHOT = path.join(__dirname, 'naukri-refresh-error.png');
-const LOGIN_MODE = process.argv[2] === 'login';
+const VISIBLE_MODE = process.argv.includes('login') || process.argv.includes('visible') || process.argv.includes('--visible');
 
 const log = (msg) => {
   const line = `[${new Date().toLocaleString()}] ${msg}`;
@@ -96,7 +96,7 @@ async function googleLogin(ctx, page) {
     viewport: { width: 1280, height: 850 },
     args: [
       '--disable-blink-features=AutomationControlled',
-      ...(LOGIN_MODE ? [] : ['--window-position=-32000,-32000']),
+      ...(VISIBLE_MODE ? [] : ['--window-position=-32000,-32000']),
     ],
   });
   let page = ctx.pages()[0] || (await ctx.newPage());
@@ -112,31 +112,87 @@ async function googleLogin(ctx, page) {
       await page.goto(PROFILE_URL, { waitUntil: 'domcontentloaded', timeout: 60000 });
     }
 
-    // Resume headline widget → pencil icon → textarea → save
-    const editIcon = page.locator('#lazyResumeHead span.edit.icon, [data-ga-track*="resumeHeadline"] .edit');
-    await editIcon.first().waitFor({ timeout: 30000 });
-    await editIcon.first().click();
+    // Helper to open the edit modal for either standard or campus layout
+    async function openEditor() {
+      // Wait for the main profile content to load
+      await page.locator('.mnj-editor, .top-section, #lazyResumeHead, [data-ga-track*="resumeHeadline"]').first().waitFor({ timeout: 30000 });
+      await page.waitForTimeout(1500);
 
-    const textarea = page.locator('#resumeHeadlineTxt');
-    await textarea.waitFor({ timeout: 15000 });
-    const current = (await textarea.inputValue()).trimEnd();
-    const updated = current.endsWith('.') ? current.slice(0, -1) : current + '.';
+      // 1. Check for standard Naukri headline pencil
+      const stdEdit = page.locator('#lazyResumeHead span.edit.icon, [data-ga-track*="resumeHeadline"] .edit').first();
+      if (await stdEdit.isVisible().catch(() => false)) {
+        await stdEdit.click();
+        const textarea = page.locator('#resumeHeadlineTxt').first();
+        await textarea.waitFor({ timeout: 15000 });
+        return { textarea, type: 'headline' };
+      }
 
-    await textarea.fill(updated);
-    await page.getByRole('button', { name: /^save$/i }).first().click();
-    await textarea.waitFor({ state: 'hidden', timeout: 15000 });
+      // 2. Check for Campus layout: scroll to load lazy sections and locate Profile Summary
+      for (let attempt = 0; attempt < 5; attempt++) {
+        const handle = await page.evaluateHandle(() => {
+          const all = Array.from(document.querySelectorAll('*'));
+          for (const el of all) {
+            if (el.innerText && el.innerText.trim() === 'Profile Summary') {
+              let parent = el;
+              for (let i = 0; i < 6 && parent; i++) {
+                const p = parent.querySelector('.new-pencil, [class*="pencil"]');
+                if (p) return p;
+                parent = parent.parentElement;
+              }
+            }
+          }
+          return null;
+        });
 
-    // modal closing isn't proof the save stuck — reload from the server and re-read
-    await page.goto(PROFILE_URL, { waitUntil: 'domcontentloaded', timeout: 60000 });
-    await editIcon.first().waitFor({ timeout: 30000 });
-    await editIcon.first().click();
-    await textarea.waitFor({ timeout: 15000 });
-    const saved = (await textarea.inputValue()).trimEnd();
-    if (saved !== updated) {
-      throw new Error(`save did not stick — server headline is "${saved.slice(0, 60)}", expected "${updated.slice(0, 60)}"`);
+        const elem = handle ? await handle.asElement() : null;
+        if (elem) {
+          await elem.scrollIntoViewIfNeeded().catch(() => {});
+          await elem.click();
+          const textarea = page.locator('textarea#summary, textarea[name="summary"]').first();
+          await textarea.waitFor({ timeout: 15000 });
+          return { textarea, type: 'summary' };
+        }
+        await page.evaluate(() => window.scrollBy(0, 500));
+        await page.waitForTimeout(1000);
+      }
+
+      throw new Error('Could not find Resume Headline or Profile Summary edit icon');
     }
 
-    log(`OK: headline ${current.endsWith('.') ? 'dot removed' : 'dot added'} (verified) → "${updated.slice(0, 60)}"`);
+    // Step 1: Open editor and calculate updated content
+    const { textarea, type } = await openEditor();
+    const current = (await textarea.inputValue()).trimEnd();
+
+    let updated;
+    let actionDesc;
+    const targetSummary = (CV.summary || '').trim();
+
+    // If a new summary is provided in .env that differs from current (ignoring trailing dots and newlines)
+    const normalize = (s) => s.replace(/\s+/g, ' ').replace(/\.+$/, '').trim();
+    if (type === 'summary' && targetSummary && normalize(current) !== normalize(targetSummary)) {
+      updated = targetSummary;
+      actionDesc = 'updated from resume';
+    } else {
+      updated = current.endsWith('.') ? current.slice(0, -1) : current + '.';
+      actionDesc = current.endsWith('.') ? 'dot removed' : 'dot added';
+    }
+
+    await textarea.fill(updated);
+    const saveBtn = page.locator('button.btn-blue:has-text("Save"), button:has-text("Save"), button:text-matches("^save$", "i")').first();
+    await saveBtn.click();
+    await textarea.waitFor({ state: 'hidden', timeout: 15000 }).catch(() => {});
+    await page.waitForTimeout(2000);
+
+    // Step 2: Verification - reload from server and check that update stuck
+    await page.goto(PROFILE_URL, { waitUntil: 'domcontentloaded', timeout: 60000 });
+    await page.waitForTimeout(2000);
+    const { textarea: reloadedTextarea } = await openEditor();
+    const saved = (await reloadedTextarea.inputValue()).trimEnd();
+    if (saved !== updated) {
+      throw new Error(`save did not stick — server ${type} is "${saved.slice(0, 60)}", expected "${updated.slice(0, 60)}"`);
+    }
+
+    log(`OK: ${type} ${actionDesc} (verified) → "${updated.slice(0, 60)}"`);
   } catch (err) {
     const pages = ctx.pages();
     for (let i = 0; i < pages.length; i++) {

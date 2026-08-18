@@ -31,6 +31,7 @@ const CV = {
   email: g('EMAIL'),
   phone: g('PHONE'),
   location: g('LOCATION'),
+  summary: g('SUMMARY'),
   currentRole: g('CURRENT_ROLE'),
   company: g('COMPANY') || (g('CURRENT_ROLE').split(' at ')[1] || '').split(' (')[0],
   education: g('EDUCATION'),
@@ -61,4 +62,14 @@ const CREDS = { email: g('GOOGLE_EMAIL') || g('EMAIL'), password: g('GOOGLE_PASS
 const geminiKey = g('GEMINI_KEY');
 const naukriProfileUrl = g('NAUKRI_PROFILE_URL', 'https://www.naukri.com/mnjuser/profile');
 
-module.exports = { CV, CREDS, geminiKey, naukriProfileUrl };
+const autoApplyConfig = {
+  keywords: g('AUTO_APPLY_KEYWORDS', 'Embedded Systems Intern, Firmware Engineer, Python Developer, IoT Intern, Embedded C').split(',').map(s => s.trim()).filter(Boolean),
+  locations: g('AUTO_APPLY_LOCATIONS', 'Pune, Remote, Solapur, Bangalore, Hyderabad').split(',').map(s => s.trim()).filter(Boolean),
+  experience: g('AUTO_APPLY_EXPERIENCE', '0'),
+  maxPerRun: parseInt(g('AUTO_APPLY_MAX_PER_RUN', '10'), 10),
+  minMatchScore: parseInt(g('AUTO_APPLY_MIN_MATCH_SCORE', '50'), 10),
+  dryRun: g('DRY_RUN', 'false').toLowerCase() === 'true',
+};
+
+module.exports = { CV, CREDS, geminiKey, naukriProfileUrl, autoApplyConfig };
+

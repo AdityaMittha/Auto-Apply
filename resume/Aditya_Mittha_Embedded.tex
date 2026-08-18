@@ -1,0 +1,145 @@
+%-------------------------
+% Resume in LaTeX - ATS Optimized
+% Author: Aditya Mittha
+%-------------------------
+
+\documentclass[letterpaper,12pt]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[empty]{fullpage}
+\usepackage{titlesec}
+\usepackage[usenames,dvipsnames]{color}
+\usepackage{enumitem}
+\usepackage[hidelinks]{hyperref}
+\usepackage{geometry}
+
+% custom font: helvetica-style (from Harshibar template)
+\usepackage{tgheros}
+\renewcommand*\familydefault{\sfdefault}
+
+% fixed width (from Harshibar template)
+\usepackage[scale=0.90,lf]{FiraMono}
+
+\geometry{left=0.55in, right=0.55in, top=0.45in, bottom=0.45in}
+
+\pagestyle{empty}
+
+\urlstyle{same}
+\raggedbottom
+\raggedright
+\setlength{\tabcolsep}{0in}
+\setlength{\parindent}{0pt}
+
+% Section formatting — clean, ATS-parseable
+\titleformat{\section}{
+  \vspace{-8pt}\bfseries\large\scshape\raggedright
+}{}{0em}{}[\color{black}\titlerule\vspace{-6pt}]
+
+% Bullet list settings
+\newcommand{\resumeItemListStart}{\begin{itemize}[leftmargin=0.2in, topsep=2pt, parsep=0pt, itemsep=1pt]}
+\newcommand{\resumeItemListEnd}{\end{itemize}\vspace{-4pt}}
+\newcommand{\resumeItem}[1]{\item\small{#1}}
+
+%-------------------------------------------
+\begin{document}
+
+%----------HEADING----------
+\begin{center}
+  {\LARGE \textbf{Aditya Mittha}} \\[4pt]
+  \small
+  +91-8010542551 \enspace $|$ \enspace
+  \href{mailto:adityamittha09@gmail.com}{adityamittha09@gmail.com} \enspace $|$ \enspace
+  \href{https://www.linkedin.com/in/adityamittha}{linkedin.com/in/adityamittha} \enspace $|$ \enspace
+  \href{https://github.com/AdityaMittha}{github.com/AdityaMittha} \enspace $|$ \enspace
+  Solapur, India
+\end{center}
+
+\vspace{-14pt}
+
+%-----------SUMMARY-----------
+\section{Summary}
+\small
+Final-year Electronics and Telecommunication engineering student with hands-on experience building embedded systems around ESP32 and ARM-based microcontrollers. Proficient in Embedded C and Python with practical knowledge of communication protocols (UART, I2C, CAN, MQTT), interrupt-driven programming, and FreeRTOS task scheduling. Experienced in IoT product development --- from sensor firmware to AWS IoT Core cloud integration. Comfortable debugging with logic analyzers, working on Linux environments, and collaborating with cross-functional teams.
+
+\vspace{-4pt}
+
+%-----------SKILLS-----------
+\section{Skills}
+\small
+\begin{itemize}[leftmargin=0.2in, label={}, topsep=0pt, parsep=1pt, itemsep=1pt]
+  \item \textbf{Programming Languages:} Embedded C, Python, Verilog, Bash/Shell Scripting
+  \item \textbf{Microcontrollers \& Hardware:} ESP32, ARM-based MCUs, Raspberry Pi, Arduino, Logic Analyzer
+  \item \textbf{Protocols \& Interfaces:} UART, SPI, I2C, CAN, MQTT (QoS), GPIO, ADC, Interrupts (ISR)
+  \item \textbf{Embedded \& RTOS:} FreeRTOS, Linux, Timers/Counters, Watchdog Timer, Low Power Modes, SWD/JTAG Debugging
+  \item \textbf{Cloud \& IoT Platforms:} AWS IoT Core, Firebase, MQTT Broker (Mosquitto), Git, GitHub
+  \item \textbf{Data \& Analytics:} Machine Learning (scikit-learn), Data Structures, NumPy, pandas
+  \item \textbf{Soft Skills:} Problem Solving, Team Collaboration, Self-Learning
+\end{itemize}
+
+\vspace{-8pt}
+
+%-----------EDUCATION-----------
+\section{Education}
+\textbf{Bachelor's Degree in Electronics and Telecommunication} \hfill 2027 \\
+\textit{Walchand Institute Of Technology} \hfill CGPA: 9.27
+
+\vspace{2pt}
+
+\textbf{Higher Schooling} \hfill 2023 \\
+\textit{D.H.B Soni College, Solapur} \hfill Percentage: 83\%
+
+\vspace{-2pt}
+
+%-----------WORK EXPERIENCE-----------
+\section{Work Experience}
+\textbf{Embedded System Intern} \hfill May 2025 -- June 2025 \\
+\textit{Codec Technologies India} \hfill \textit{Remote}
+\resumeItemListStart
+  \resumeItem{Configured and tested UART and I\textsuperscript{2}C communication interfaces on microcontrollers, writing Embedded C code to establish reliable data transmission between modules.}
+  \resumeItem{Identified and resolved 10+ hardware interfacing defects across two embedded modules before production testing.}
+  \resumeItem{Managed version control with Git/GitHub across 2 active branches, maintaining project documentation and development workflows.}
+\resumeItemListEnd
+\small{\textbf{Technologies:} Embedded C, UART, I\textsuperscript{2}C, GPIO, Git, GitHub}
+
+\vspace{-2pt}
+
+%-----------PROJECTS-----------
+\section{Projects}
+
+\textbf{AQUANOVA -- Smart Water Pressure Management for Equitable Water Supply} \hfill 2026
+\resumeItemListStart
+  \resumeItem{Wrote ESP32 firmware to poll pressure and flow sensors over ADC/GPIO, publishing readings via MQTT (QoS) to Firebase cloud storage for real-time pipeline monitoring.}
+  \resumeItem{Built a Python analytics pipeline with pandas, numpy, and scikit-learn's Isolation Forest --- detected leaks and pressure anomalies, reducing estimated maintenance response time.}
+\resumeItemListEnd
+\small{\textbf{Role:} IoT Firmware \& Cloud Integration (3-person team)} \\
+\small{\textbf{Tech Stack:} ESP32, MQTT (QoS), Firebase, ADC, Pressure/Flow Sensors, Python, Telegram/SMS alerts}
+
+\vspace{8pt}
+
+\textbf{SORTIFY -- Waste Segregation System} \hfill 2025
+\resumeItemListStart
+  \resumeItem{Designed an AI-driven waste sorting system combining computer vision, weight sensing, and vibration-based sorting to classify household waste into 4 recyclable categories.}
+  \resumeItem{Integrated Raspberry Pi with camera module, weight sensor, and servo motor; automated identification, measurement, and bin control using Python and C.}
+  \resumeItem{Built a IoT dashboard tracking real-time segregation statistics, giving municipal teams actionable waste management data.}
+\resumeItemListEnd
+\small{\textbf{Role:} Embedded Hardware \& Raspberry Pi Integration (Hackathon, 4-person team)} \\
+\small{\textbf{Tech Stack:} Raspberry Pi, Embedded C, Python, Camera Module, HX711, Servo/PWM, Firebase, IoT Cloud}
+
+\vspace{8pt}
+
+%-------------------------------------------
+\section{Rewards \& Achievements}
+\resumeItemListStart
+  \resumeItem{2x Winner, National Electronic Quiz Competition (Quizotronics)}
+  \resumeItem{Runner-up, State-level chess championship}
+  \resumeItem{Participated in 4\textsuperscript{+} Hackathons}
+\resumeItemListEnd
+\vspace{-4pt}
+%-----------------
+\section{Languages}
+\small
+English \enspace $|$ \enspace Hindi \enspace $|$ \enspace Marathi \enspace $|$ \enspace Kannada
+
+%-------------------------------------------  
+\end{document}

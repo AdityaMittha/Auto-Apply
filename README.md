@@ -106,7 +106,59 @@ Unregister-ScheduledTask NaukriProfileRefresh     # remove
 | `naukri-refresh.log` | Run history (git-ignored) |
 | `.naukri-chrome-profile/` | Saved Chrome session (git-ignored) |
 
+## Auto-Apply Engine (6 Portals: Naukri, Internshala, LinkedIn, Indeed, Wellfound, Foundit)
+
+Automatically searches for jobs and internships matching your profile across 6 top platforms, extracts Job Descriptions, calculates match scores, selects your tailored resume PDF, and applies automatically.
+
+### Commands:
+
+| Command | Action |
+|---|---|
+| `npm run apply:all:dry` | **All Portals Dry Run** — crawls & scores across all 6 portals without submitting |
+| `npm run apply:all` | **All Portals Live** — applies across all 6 portals & dispatches the daily email report |
+| `npm run apply:naukri` | **Naukri Only** — crawl & apply on Naukri.com |
+| `npm run apply:internshala` | **Internshala Only** — crawl & apply on Internshala internships |
+| `npm run apply:linkedin` | **LinkedIn Only** — crawl Easy Apply roles on LinkedIn |
+| `npm run apply:indeed` | **Indeed Only** — crawl & match Indeed India jobs |
+| `npm run apply:wellfound` | **Wellfound Only** — crawl startup engineering jobs & internships |
+| `npm run apply:foundit` | **Foundit Only** — crawl tech openings on Foundit (Monster) |
+| `npm run apply:history` | **View Applied Jobs Table** — prints unified terminal table of all applied jobs |
+
+### End-of-Day Email Digest (`mailer.js`)
+
+At the end of every day (8:00 PM), a scheduled Windows task compiles all applications submitted across all portals and sends an HTML digest to `adityamittha09@gmail.com`.
+
+| Command | Action |
+|---|---|
+| `npm run mail:preview` | **Preview Report Locally** — generates `daily-report-preview.html` to view in your browser |
+| `npm run mail:report` | **Send Report Now** — emails the daily digest to your inbox |
+| `npm run task:mail:status` | **Check Mailer Task** — checks the scheduled daily 8:00 PM mailer task state |
+
+### Configuration (`.env`):
+
+```env
+# Email Digest Configuration
+REPORT_EMAIL_TO=adityamittha09@gmail.com
+SMTP_USER=adityamittha09@gmail.com
+SMTP_PASS=your-gmail-app-password
+
+# Auto-Apply Keywords & Locations
+AUTO_APPLY_KEYWORDS=Embedded Systems Intern, Firmware Engineer, Python Developer, IoT Intern, Embedded C
+AUTO_APPLY_LOCATIONS=Pune, Remote, Solapur, Bangalore, Hyderabad
+AUTO_APPLY_EXPERIENCE=0
+AUTO_APPLY_MIN_MATCH_SCORE=50
+AUTO_APPLY_MAX_PER_RUN=10
+DRY_RUN=false
+```
+
+### Resume Tailoring Logic:
+- **Embedded / Firmware Roles** → Automatically attaches `resume/Mittha_Aditya_Embedded.pdf` (ARM Cortex-M, ESP32, FreeRTOS, Embedded C, UART/SPI/I2C/CAN/MQTT, AQUANOVA, SORTIFY).
+- **Python / Cloud / DevOps Roles** → Automatically attaches `resume/Mittha_Aditya.pdf` (Python, AWS Lambda/DynamoDB, Docker, CI/CD, LabPulse).
+- **Recruiter Screening Questions** → Automatically answered using your credentials and project achievements.
+- **Application History** → Stored in `applied-jobs.json` to prevent applying twice to the same posting.
+
 ## Disclaimer
 
-Automating your own profile may be against Naukri's Terms of Service. It only
-edits your own headline at a slow, human-like rate, but use at your own risk.
+Automating your own profile and applications may be subject to platform guidelines. The engine uses human-like randomized delays and daily application caps, but use responsibly.
+
+

@@ -1,0 +1,146 @@
+%-------------------------
+% Resume in LaTeX - ATS Optimized
+% Author: Aditya Mittha
+% Target: JOSH Software, Pune — Python Developer & DevOps Role
+%-------------------------
+
+\documentclass[letterpaper,12pt]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[empty]{fullpage}
+\usepackage{titlesec}
+\usepackage[usenames,dvipsnames]{color}
+\usepackage{enumitem}
+\usepackage[hidelinks]{hyperref}
+\usepackage{geometry}
+
+% custom font: helvetica-style (from Harshibar template)
+\usepackage{tgheros}
+\renewcommand*\familydefault{\sfdefault}
+
+% fixed width (from Harshibar template)
+\usepackage[scale=0.90,lf]{FiraMono}
+
+\geometry{left=0.55in, right=0.55in, top=0.45in, bottom=0.45in}
+
+\pagestyle{empty}
+
+\urlstyle{same}
+\raggedbottom
+\raggedright
+\setlength{\tabcolsep}{0in}
+\setlength{\parindent}{0pt}
+
+% Section formatting — clean, ATS-parseable
+\titleformat{\section}{
+  \vspace{-8pt}\bfseries\large\scshape\raggedright
+}{}{0em}{}[\color{black}\titlerule\vspace{-6pt}]
+
+% Bullet list settings
+\newcommand{\resumeItemListStart}{\begin{itemize}[leftmargin=0.2in, topsep=2pt, parsep=0pt, itemsep=1pt]}
+\newcommand{\resumeItemListEnd}{\end{itemize}\vspace{-4pt}}
+\newcommand{\resumeItem}[1]{\item\small{#1}}
+
+%-------------------------------------------
+\begin{document}
+
+%----------HEADING----------
+\begin{center}
+  {\LARGE \textbf{Aditya Mittha}} \\[4pt]
+  \small
+  +91-8010542551 \enspace $|$ \enspace
+  \href{mailto:adityamittha09@gmail.com}{adityamittha09@gmail.com} \enspace $|$ \enspace
+  \href{https://www.linkedin.com/in/adityamittha}{linkedin.com/in/adityamittha} \enspace $|$ \enspace
+  \href{https://github.com/AdityaMittha}{github.com/AdityaMittha} \enspace $|$ \enspace
+  Solapur, India
+\end{center}
+
+\vspace{-14pt}
+
+%-----------SUMMARY-----------
+\section{Summary}
+\small
+Final-year engineering student with a solid foundation in Python development and hands-on DevOps practices. Experienced in writing Python scripts for automation, data processing, and background services, alongside building serverless backends on AWS. Practical experience containerizing applications with Docker, setting up CI/CD workflows using GitHub Actions, and managing Linux environments. Eager to leverage Python programming and cloud automation skills in an entry-level Python / DevOps role at JOSH Software.
+
+\vspace{-4pt}
+
+\section{Skills}
+\small
+\begin{itemize}[leftmargin=0.2in, label={}, topsep=0pt, parsep=1pt, itemsep=1pt]
+  \item \textbf{Programming \& Scripting:} Python (Data Structures, OOP, REST APIs, Automation), Bash, C, JavaScript
+  \item \textbf{DevOps \& Containerization:} Docker, Dockerfile creation, Container builds, CI/CD Concepts
+  \item \textbf{Cloud Platforms (AWS):} AWS Lambda, API Gateway, DynamoDB, S3, IAM, CloudWatch, Firebase
+  \item \textbf{CI/CD \& Tools:} Git, GitHub, GitHub Actions (Automated Image Builds), Postman, JSON/YAML
+  \item \textbf{Operating Systems \& Networking:} Linux (Ubuntu/WSL, Shell Commands, SSH), Windows, TCP/IP, HTTP/HTTPS, DNS
+  \item \textbf{Soft Skills:} Problem Solving, Team Collaboration, Adaptability, Clear Communication, Self-Learning
+\end{itemize}
+
+\vspace{-8pt}
+
+%-----------EDUCATION-----------
+\section{Education}
+\textbf{Bachelor's Degree in Electronics and Telecommunication} \hfill 2027 \\
+\textit{Walchand Institute Of Technology} \hfill CGPA: 9.27
+
+\vspace{2pt}
+
+\textbf{Higher Schooling} \hfill 2023 \\
+\textit{D.H.B Soni College, Solapur} \hfill Percentage: 83\%
+
+\vspace{-2pt}
+
+%-----------WORK EXPERIENCE-----------
+\section{Work Experience}
+\textbf{Embedded Systems Intern} \hfill May 2025 -- June 2025 \\
+\textit{Codec Technologies India} \hfill \textit{Remote}
+\resumeItemListStart
+  \resumeItem{Set up and tested UART and I\textsuperscript{2}C communication interfaces on microcontrollers, writing C code to establish reliable hardware-to-software data transmission.}
+  \resumeItem{Debugged hardware interfacing issues across two embedded modules, resolving 10+ integration defects prior to production testing.}
+  \resumeItem{Utilized Git and GitHub for version control across active branches, maintaining structured commits and up-to-date technical documentation.}
+  \resumeItem{Worked in a Linux terminal environment for firmware flashing, serial log analysis, and executing test automation scripts.}
+\resumeItemListEnd
+\small{\textbf{Technologies:} Python Scripting, C, UART, I\textsuperscript{2}C, Git, GitHub, Linux, Serial Debugging}
+
+\vspace{-2pt}
+
+%-----------PROJECTS-----------
+\section{Projects}
+
+\textbf{\href{https://github.com/AdityaMittha/LabPulse}{LabPulse -- Cloud-Based Lab Monitoring System}} \hfill 2026
+\resumeItemListStart
+  \resumeItem{Developed a modular Python agent running as a Windows background service to track active user sessions and securely stream telemetry to the cloud API.}
+  \resumeItem{Designed and deployed the AWS serverless backend (Lambda, API Gateway, DynamoDB) to ingest, process, and store system usage metrics asynchronously.}
+  \resumeItem{Containerized the dashboard application using Docker and configured a GitHub Actions CI/CD pipeline to automate Docker image builds on code commits.}
+  \resumeItem{Implemented API key authentication with SHA-256 hashing and Role-Based Access Control (RBAC) to secure endpoint interactions.}
+  \resumeItem{Automated agent deployment across lab environments using PowerShell scripting and Windows Scheduled Tasks.}
+\resumeItemListEnd
+\small{\textbf{Role:} Backend Lead, Cloud & DevOps (3-person team)} \\
+\small{\textbf{Tech Stack:} Python, AWS Lambda, API Gateway, DynamoDB, Docker, GitHub Actions, React, PowerShell}
+
+\vspace{8pt}
+
+\textbf{\href{https://github.com/AdityaMittha/Air_guitar}{Air Guitar -- Real-Time Sensor-to-Audio Pipeline}} \hfill 2025
+\resumeItemListStart
+  \resumeItem{Engineered a real-time Python application that ingests MPU6050 accelerometer data from an Arduino via serial communication and generates spatial audio.}
+  \resumeItem{Developed signal processing algorithms using Python libraries (NumPy, sounddevice) to map physical sensor angles to virtual string triggers via the Karplus-Strong algorithm.}
+  \resumeItem{Designed clean Object-Oriented (OOP) abstractions separating data acquisition, mathematical calculations, and audio rendering modules.}
+\resumeItemListEnd
+\small{\textbf{Role:} Solo Project --- Python Development, System Design} \\
+\small{\textbf{Tech Stack:} Python, NumPy, OOP, I\textsuperscript{2}C, Serial Communication, Hardware Interfacing}
+
+%-------------------------------------------
+\section{Rewards \& Achievements}
+\resumeItemListStart
+  \resumeItem{2x Winner, National Electronic Quiz Competition (Quizotronics)}
+  \resumeItem{Runner-up, State-level chess championship}
+  \resumeItem{Participated in 4\textsuperscript{+} Hackathons}
+\resumeItemListEnd
+\vspace{-4pt}
+%-----------------
+\section{Languages}
+\small
+English \enspace $|$ \enspace Hindi \enspace $|$ \enspace Marathi \enspace $|$ \enspace Kannada
+
+%-------------------------------------------  
+\end{document}

@@ -6,6 +6,7 @@
 applications*.csv
 apply-state-*.json
 *.png
+daily-report-preview.html
 
 # saved browser sessions (contain logged-in cookies)
 .*-chrome-profile/
