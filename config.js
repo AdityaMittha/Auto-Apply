@@ -65,7 +65,7 @@ const naukriProfileUrl = g('NAUKRI_PROFILE_URL', 'https://www.naukri.com/mnjuser
 // AI Configuration
 const aiConfig = {
   enabled: g('AI_ENABLED', 'true').toLowerCase() === 'true',
-  model: g('GEMINI_MODEL', 'gemini-2.0-flash'),
+  model: g('GEMINI_MODEL', 'gemini-flash-latest'),
   timeoutMs: parseInt(g('AI_TIMEOUT_MS', '10000'), 10),
 };
 

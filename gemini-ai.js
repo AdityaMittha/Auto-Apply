@@ -18,13 +18,13 @@ const https = require('https');
  */
 function callGemini(prompt, apiKey, opts = {}) {
   const {
-    maxTokens = 300,
+    maxTokens = 1000,
     temperature = 0.2,
-    timeoutMs = 10000,
+    timeoutMs = 15000,
     retries = 1,
   } = opts;
 
-  const model = process.env.GEMINI_MODEL || 'gemini-2.0-flash';
+  const model = process.env.GEMINI_MODEL || 'gemini-flash-latest';
 
   const body = JSON.stringify({
     contents: [{ parts: [{ text: prompt }] }],
@@ -148,7 +148,7 @@ Scoring guidelines:
 
   try {
     const raw = await callGemini(prompt, apiKey, {
-      maxTokens: 250,
+      maxTokens: 1000,
       temperature: 0.1,
     });
     if (!raw) return null;
@@ -204,7 +204,7 @@ Answer directly — no explanations, no quotes around the answer, no preamble.`;
 
   try {
     const raw = await callGemini(prompt, apiKey, {
-      maxTokens: 120,
+      maxTokens: 1000,
       temperature: 0.2,
     });
     if (!raw) return null;
@@ -267,7 +267,7 @@ Return ONLY the rewritten summary text. No quotes, no labels, no preamble.`;
 
   try {
     const raw = await callGemini(prompt, apiKey, {
-      maxTokens: 200,
+      maxTokens: 1000,
       temperature: 0.3,
     });
     return raw ? raw.trim() : null;
