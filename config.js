@@ -62,6 +62,13 @@ const CREDS = { email: g('GOOGLE_EMAIL') || g('EMAIL'), password: g('GOOGLE_PASS
 const geminiKey = g('GEMINI_KEY');
 const naukriProfileUrl = g('NAUKRI_PROFILE_URL', 'https://www.naukri.com/mnjuser/profile');
 
+// AI Configuration
+const aiConfig = {
+  enabled: g('AI_ENABLED', 'true').toLowerCase() === 'true',
+  model: g('GEMINI_MODEL', 'gemini-2.0-flash'),
+  timeoutMs: parseInt(g('AI_TIMEOUT_MS', '10000'), 10),
+};
+
 const autoApplyConfig = {
   keywords: g('AUTO_APPLY_KEYWORDS', 'Embedded Systems Intern, Firmware Engineer, Python Developer, IoT Intern, Embedded C').split(',').map(s => s.trim()).filter(Boolean),
   locations: g('AUTO_APPLY_LOCATIONS', 'Pune, Remote, Solapur, Bangalore, Hyderabad').split(',').map(s => s.trim()).filter(Boolean),
@@ -71,5 +78,5 @@ const autoApplyConfig = {
   dryRun: g('DRY_RUN', 'false').toLowerCase() === 'true',
 };
 
-module.exports = { CV, CREDS, geminiKey, naukriProfileUrl, autoApplyConfig };
+module.exports = { CV, CREDS, geminiKey, naukriProfileUrl, autoApplyConfig, aiConfig };
 

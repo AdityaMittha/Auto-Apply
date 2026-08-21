@@ -6,7 +6,7 @@
 const { chromium } = require('playwright-core');
 const path = require('path');
 const fs = require('fs');
-const { CV, CREDS, geminiKey, autoApplyConfig } = require('./config');
+const { CV, CREDS, geminiKey, autoApplyConfig, aiConfig } = require('./config');
 const { analyzeJob, answerQuestion } = require('./tailor-engine');
 
 const PROFILE_DIR = path.join(__dirname, '.naukri-chrome-profile');
@@ -143,10 +143,23 @@ function sleep(ms) {
               log(`Warning: Could not fetch detailed JD page, using card snippet.`);
             }
 
-            // Run Tailoring Engine
-            const analysis = analyzeJob(job.title, fullJd, job.tags);
-            log(`   Category: [${analysis.category.toUpperCase()}] | Score: ${analysis.matchScore}% (Min: ${autoApplyConfig.minMatchScore}%)`);
+            // Run Tailoring Engine (hybrid keyword + AI)
+            const analysis = await analyzeJob(job.title, fullJd, job.tags, {
+              cv: CV,
+              geminiKey,
+              aiEnabled: aiConfig.enabled,
+            });
+            log(`   Category: [${analysis.category.toUpperCase()}] | Score: ${analysis.matchScore}% (Min: ${autoApplyConfig.minMatchScore}%) ${analysis.aiEnhanced ? '🤖 AI' : '🔑 Keyword'}`);
             log(`   Matched Keywords: ${analysis.matchedKeywords.slice(0, 6).join(', ')}`);
+            if (analysis.aiEnhanced) {
+              log(`   🧠 AI Matched Skills: ${analysis.matchedSkills.join(', ')}`);
+              if (analysis.missingSkills.length > 0) {
+                log(`   ⚠️ Missing Skills: ${analysis.missingSkills.join(', ')}`);
+              }
+              if (analysis.reasoning) {
+                log(`   💡 AI Reasoning: ${analysis.reasoning}`);
+              }
+            }
             log(`   Selected Resume: ${analysis.resumeName}`);
 
             if (analysis.matchScore < autoApplyConfig.minMatchScore) {
@@ -271,6 +284,10 @@ function sleep(ms) {
                   category: analysis.category,
                   resumeUsed: analysis.resumeName,
                   matchScore: analysis.matchScore,
+                  matchedSkills: analysis.matchedSkills || [],
+                  missingSkills: analysis.missingSkills || [],
+                  aiReasoning: analysis.reasoning || '',
+                  aiEnhanced: analysis.aiEnhanced || false,
                   appliedAt: new Date().toISOString(),
                   status: 'APPLIED',
                 });

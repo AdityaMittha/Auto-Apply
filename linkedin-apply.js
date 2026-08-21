@@ -6,7 +6,7 @@
 const { chromium } = require('playwright-core');
 const path = require('path');
 const fs = require('fs');
-const { CV, autoApplyConfig, geminiKey } = require('./config');
+const { CV, autoApplyConfig, geminiKey, aiConfig } = require('./config');
 const { analyzeJob, answerQuestion } = require('./tailor-engine');
 
 const PROFILE_DIR = path.join(__dirname, '.linkedin-chrome-profile');
@@ -99,9 +99,32 @@ function saveAppliedJobs(data) {
             log(`-------------------------------------------------------`);
             log(`Evaluating: ${job.title} at ${job.company} (${job.location})`);
 
-            // Analyze with tailor engine
-            const analysis = analyzeJob(job.title, `${job.title} ${job.company} ${job.location}`, []);
-            log(`   Category: [${analysis.category.toUpperCase()}] | Score: ${analysis.matchScore}% | Resume: ${analysis.resumeName}`);
+            // Fetch full JD from job detail page
+            let fullJd = `${job.title} ${job.company} ${job.location}`;
+            let jobPage = null;
+            try {
+              jobPage = await ctx.newPage();
+              await jobPage.goto(job.url, { waitUntil: 'domcontentloaded', timeout: 35000 });
+              await jobPage.waitForTimeout(2000);
+              const pageJd = await jobPage.evaluate(() => {
+                const jdEl = document.querySelector('.jobs-description, .jobs-box__html-content, div[class*="description"], section[class*="description"]');
+                return jdEl ? jdEl.innerText.trim() : '';
+              });
+              if (pageJd) fullJd = pageJd;
+            } catch (err) {
+              log(`   Warning: Could not fetch LinkedIn JD page, using card info.`);
+            }
+
+            // Analyze with hybrid tailor engine (keyword + AI)
+            const analysis = await analyzeJob(job.title, fullJd, [], {
+              cv: CV,
+              geminiKey,
+              aiEnabled: aiConfig.enabled,
+            });
+            log(`   Category: [${analysis.category.toUpperCase()}] | Score: ${analysis.matchScore}% | Resume: ${analysis.resumeName} ${analysis.aiEnhanced ? '🤖 AI' : '🔑 Keyword'}`);
+            if (analysis.aiEnhanced && analysis.reasoning) {
+              log(`   💡 ${analysis.reasoning}`);
+            }
 
             appliedDb.applied.push({
               jobId: job.url,
@@ -112,6 +135,10 @@ function saveAppliedJobs(data) {
               category: analysis.category,
               resumeUsed: analysis.resumeName,
               matchScore: analysis.matchScore,
+              matchedSkills: analysis.matchedSkills || [],
+              missingSkills: analysis.missingSkills || [],
+              aiReasoning: analysis.reasoning || '',
+              aiEnhanced: analysis.aiEnhanced || false,
               appliedAt: new Date().toISOString(),
               status: IS_DRY_RUN ? 'PREVIEW_DRY_RUN' : 'APPLIED',
             });
@@ -119,6 +146,8 @@ function saveAppliedJobs(data) {
             appliedUrls.add(job.url);
             saveAppliedJobs(appliedDb);
             processedCount++;
+
+            if (jobPage) await jobPage.close().catch(() => {});
           }
         } catch (err) {
           log(`Error searching "${keyword}" on LinkedIn: ${err.message}`);

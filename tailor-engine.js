@@ -1,10 +1,16 @@
 /**
- * Tailor Engine — analyzes Job Descriptions (JDs), selects the best-matching
- * tailored resume PDF, calculates compatibility score, and generates smart
- * screening question responses.
+ * Tailor Engine — Hybrid keyword + Gemini AI analysis.
+ *
+ * analyzeJob()         → Fast keyword check, then optional AI refinement
+ * answerQuestion()     → Regex fast-path for common Qs, AI for everything else
+ * getResumeForCategory() → Maps category → resume PDF path
  */
 const path = require('path');
-const https = require('https');
+const {
+  analyzeJobWithAI,
+  answerScreeningQuestion,
+  tailorResumeSummary,
+} = require('./gemini-ai');
 
 const RESUMES = {
   embedded: path.join(__dirname, 'resume', 'Mittha_Aditya_Embedded.pdf'),
@@ -28,10 +34,10 @@ const PYTHON_DEVOPS_KEYWORDS = [
 ];
 
 /**
- * Evaluates a Job Description and Title to calculate match score, domain category,
- * and select the best tailored resume PDF.
+ * Fast keyword-based analysis (no API call, instant).
+ * Used as the primary analysis and as fallback when AI is unavailable.
  */
-function analyzeJob(title = '', jdText = '', requiredSkills = []) {
+function keywordAnalysis(title = '', jdText = '', requiredSkills = []) {
   const content = `${title} ${requiredSkills.join(' ')} ${jdText}`.toLowerCase();
 
   let embeddedMatches = 0;
@@ -73,14 +79,80 @@ function analyzeJob(title = '', jdText = '', requiredSkills = []) {
     matchedKeywords: category === 'embedded' ? matchedEmbedded : matchedPython,
     selectedResume,
     resumeName: path.basename(selectedResume),
+    // AI fields (empty for keyword-only)
+    matchedSkills: [],
+    missingSkills: [],
+    reasoning: '',
+    aiEnhanced: false,
   };
 }
 
 /**
- * Resolves screening / chatbot questions automatically using CV data.
+ * Hybrid job analysis — fast keyword check + optional AI refinement.
+ *
+ * 1. Always runs keyword analysis first (instant, no API cost)
+ * 2. If AI is enabled and an API key is provided, calls Gemini for:
+ *    - Calibrated match score
+ *    - Semantic skill matching
+ *    - Missing skills identification
+ *    - Reasoning
+ * 3. If AI fails, returns keyword-only result seamlessly
+ *
+ * @param {string} title - Job title
+ * @param {string} jdText - Full job description text
+ * @param {string[]} requiredSkills - Tags/skills from the job listing
+ * @param {object} [opts] - { cv, geminiKey, aiEnabled }
+ * @returns {Promise<object>} Analysis result
+ */
+async function analyzeJob(title = '', jdText = '', requiredSkills = [], opts = {}) {
+  const { cv, geminiKey, aiEnabled = true } = opts;
+
+  // Step 1: Fast keyword analysis (always runs)
+  const kwResult = keywordAnalysis(title, jdText, requiredSkills);
+
+  // Step 2: AI refinement (optional)
+  if (!aiEnabled || !geminiKey || !cv) {
+    return kwResult;
+  }
+
+  try {
+    const aiResult = await analyzeJobWithAI(title, jdText, cv, geminiKey);
+    if (!aiResult) return kwResult;
+
+    // Merge: Use AI score but keep keyword-selected resume
+    const category = aiResult.category || kwResult.category;
+    const selectedResume = RESUMES[category] || RESUMES[kwResult.category] || RESUMES.default;
+
+    return {
+      category,
+      matchScore: aiResult.matchScore,
+      matchedKeywords: kwResult.matchedKeywords,
+      selectedResume,
+      resumeName: path.basename(selectedResume),
+      // AI-enhanced fields
+      matchedSkills: aiResult.matchedSkills,
+      missingSkills: aiResult.missingSkills,
+      reasoning: aiResult.reasoning,
+      aiEnhanced: true,
+    };
+  } catch {
+    // AI failed — return keyword-only result
+    return kwResult;
+  }
+}
+
+/**
+ * Resolves screening / chatbot questions.
+ *
+ * Strategy:
+ *   1. Regex fast-path for the most common questions (saves API calls)
+ *   2. AI-powered answering for everything else
+ *   3. Generic fallback if both fail
  */
 async function answerQuestion(questionText = '', options = [], cv = {}, geminiKey = '') {
   const q = questionText.toLowerCase();
+
+  // ── Fast-path: Common questions (no API call needed) ──────────────
 
   // Notice Period
   if (/notice|how soon|availability|join/i.test(q)) {
@@ -115,7 +187,7 @@ async function answerQuestion(questionText = '', options = [], cv = {}, geminiKe
       const match = options.find(o => /0|fresher|0-1|< 1|1/i.test(o));
       if (match) return match;
     }
-    return '0-1 years (Fresher with Internship experience at Codec Technologies)';
+    return '0-1 years (Fresher with Internship experience)';
   }
 
   // Education / Graduation Year / Degree
@@ -124,7 +196,7 @@ async function answerQuestion(questionText = '', options = [], cv = {}, geminiKe
       const match = options.find(o => /b\.?tech|b\.?e|engineering|2027|2026/i.test(o));
       if (match) return match;
     }
-    return 'B.Tech in Electronics & Telecommunication (Walchand Institute of Technology, 2027, CGPA: 9.27)';
+    return cv.education || 'B.Tech in Electronics & Telecommunication';
   }
 
   // Relocation / Location / Remote
@@ -133,7 +205,7 @@ async function answerQuestion(questionText = '', options = [], cv = {}, geminiKe
       const match = options.find(o => /yes|pune|solapur|any|open/i.test(o));
       if (match) return match;
     }
-    return 'Yes, open to relocation. Currently based in Solapur/Pune.';
+    return cv.relocate || 'Yes, open to relocation.';
   }
 
   // Work Authorization / Gender
@@ -149,67 +221,32 @@ async function answerQuestion(questionText = '', options = [], cv = {}, geminiKe
     return 'Yes, have hands-on project and internship experience in this domain.';
   }
 
-  // Option matching fallback
+  // Option matching fallback (before AI, to save API calls on trivial MCQs)
   if (options.length > 0) {
-    const firstOpt = options.find(o => !/none|no|not/i.test(o)) || options[0];
-    return firstOpt;
+    const positiveOpt = options.find(o => !/none|no|not/i.test(o)) || options[0];
+    // Only use this for simple 2-3 option MCQs — for complex questions, let AI handle it
+    if (options.length <= 3) return positiveOpt;
   }
 
-  // Gemini AI fallback for complex open-ended screening questions
+  // ── AI-powered answering (for complex/unmatched questions) ────────
+
   if (geminiKey) {
     try {
-      const aiAnswer = await askGemini(questionText, cv, geminiKey);
+      const aiAnswer = await answerScreeningQuestion(questionText, options, cv, geminiKey);
       if (aiAnswer) return aiAnswer;
-    } catch (err) {
-      // fallback to default
+    } catch {
+      // fall through to generic
     }
   }
 
+  // ── Generic fallback ──────────────────────────────────────────────
   return 'Yes, have relevant experience with demonstrated academic and project accomplishments.';
-}
-
-/**
- * Optional Gemini API caller for open-ended screening questions.
- */
-function askGemini(prompt, cv, apiKey) {
-  return new Promise((resolve) => {
-    const body = JSON.stringify({
-      contents: [{
-        parts: [{
-          text: `You are Aditya Mittha, a final-year Electronics & Telecommunication student (CGPA 9.27) at Walchand Institute of Technology with skills in Embedded Systems (Embedded C, FreeRTOS, ESP32, ARM, UART, I2C, SPI, MQTT) and Python (AWS, Docker, Linux). Answer the following job application question concisely, professionally, and authentically in 1-2 sentences:\n\nQuestion: "${prompt}"`
-        }]
-      }],
-      generationConfig: { maxOutputTokens: 120, temperature: 0.2 }
-    });
-
-    const req = https.request({
-      hostname: 'generativelanguage.googleapis.com',
-      path: `/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) }
-    }, (res) => {
-      let data = '';
-      res.on('data', (d) => data += d);
-      res.on('end', () => {
-        try {
-          const parsed = JSON.parse(data);
-          const answer = parsed.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
-          resolve(answer || null);
-        } catch {
-          resolve(null);
-        }
-      });
-    });
-
-    req.on('error', () => resolve(null));
-    req.setTimeout(8000, () => { req.destroy(); resolve(null); });
-    req.write(body);
-    req.end();
-  });
 }
 
 module.exports = {
   analyzeJob,
   answerQuestion,
+  tailorResumeSummary,
+  keywordAnalysis,
   RESUMES,
 };

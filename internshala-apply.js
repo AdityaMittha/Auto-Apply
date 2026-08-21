@@ -5,7 +5,7 @@
 const { chromium } = require('playwright-core');
 const path = require('path');
 const fs = require('fs');
-const { CV, autoApplyConfig } = require('./config');
+const { CV, autoApplyConfig, geminiKey, aiConfig } = require('./config');
 const { analyzeJob } = require('./tailor-engine');
 
 const PROFILE_DIR = path.join(__dirname, '.internshala-chrome-profile');
@@ -103,9 +103,32 @@ const INTERNSHALA_SLUGS = [
           log(`-------------------------------------------------------`);
           log(`Evaluating: ${item.title} at ${item.company} (${item.location})`);
 
-          // Evaluate with tailor engine
-          const analysis = analyzeJob(item.title, `${item.title} ${item.location}`, []);
-          log(`   Category: [${analysis.category.toUpperCase()}] | Score: ${analysis.matchScore}% | Resume: ${analysis.resumeName}`);
+          // Fetch full JD from internship detail page
+          let fullJd = `${item.title} ${item.location}`;
+          let detailPage = null;
+          try {
+            detailPage = await ctx.newPage();
+            await detailPage.goto(item.url, { waitUntil: 'domcontentloaded', timeout: 35000 });
+            await detailPage.waitForTimeout(2000);
+            const pageJd = await detailPage.evaluate(() => {
+              const jdEl = document.querySelector('.internship_details, .detail_view, div[class*="about"], div[class*="detail"]');
+              return jdEl ? jdEl.innerText.trim() : '';
+            });
+            if (pageJd) fullJd = pageJd;
+          } catch (err) {
+            log(`   Warning: Could not fetch Internshala detail page, using card info.`);
+          }
+
+          // Evaluate with hybrid tailor engine (keyword + AI)
+          const analysis = await analyzeJob(item.title, fullJd, [], {
+            cv: CV,
+            geminiKey,
+            aiEnabled: aiConfig.enabled,
+          });
+          log(`   Category: [${analysis.category.toUpperCase()}] | Score: ${analysis.matchScore}% | Resume: ${analysis.resumeName} ${analysis.aiEnhanced ? '🤖 AI' : '🔑 Keyword'}`);
+          if (analysis.aiEnhanced && analysis.reasoning) {
+            log(`   💡 ${analysis.reasoning}`);
+          }
 
           appliedDb.applied.push({
             jobId: item.url,
@@ -116,6 +139,10 @@ const INTERNSHALA_SLUGS = [
             category: analysis.category,
             resumeUsed: analysis.resumeName,
             matchScore: analysis.matchScore,
+            matchedSkills: analysis.matchedSkills || [],
+            missingSkills: analysis.missingSkills || [],
+            aiReasoning: analysis.reasoning || '',
+            aiEnhanced: analysis.aiEnhanced || false,
             appliedAt: new Date().toISOString(),
             status: IS_DRY_RUN ? 'PREVIEW_DRY_RUN' : 'APPLIED',
           });
@@ -123,6 +150,8 @@ const INTERNSHALA_SLUGS = [
           appliedUrls.add(item.url);
           saveAppliedJobs(appliedDb);
           processedCount++;
+
+          if (detailPage) await detailPage.close().catch(() => {});
         }
       } catch (err) {
         log(`Error processing ${slug}: ${err.message}`);

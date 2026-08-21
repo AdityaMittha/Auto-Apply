@@ -4,7 +4,7 @@
 const { chromium } = require('playwright-core');
 const path = require('path');
 const fs = require('fs');
-const { autoApplyConfig } = require('./config');
+const { CV, autoApplyConfig, geminiKey, aiConfig } = require('./config');
 const { analyzeJob } = require('./tailor-engine');
 
 const PROFILE_DIR = path.join(__dirname, '.foundit-chrome-profile');
@@ -89,10 +89,17 @@ function saveAppliedJobs(data) {
           if (processedCount >= autoApplyConfig.maxPerRun) break;
           if (appliedUrls.has(job.url)) continue;
 
-          const analysis = analyzeJob(job.title, `${job.title} ${job.company} ${job.location}`, []);
+          const analysis = await analyzeJob(job.title, `${job.title} ${job.company} ${job.location}`, [], {
+            cv: CV,
+            geminiKey,
+            aiEnabled: aiConfig.enabled,
+          });
           log(`-------------------------------------------------------`);
           log(`Evaluating: ${job.title} at ${job.company} (${job.location})`);
-          log(`   Category: [${analysis.category.toUpperCase()}] | Score: ${analysis.matchScore}% | Resume: ${analysis.resumeName}`);
+          log(`   Category: [${analysis.category.toUpperCase()}] | Score: ${analysis.matchScore}% | Resume: ${analysis.resumeName} ${analysis.aiEnhanced ? '🤖 AI' : '🔑 Keyword'}`);
+          if (analysis.aiEnhanced && analysis.reasoning) {
+            log(`   💡 ${analysis.reasoning}`);
+          }
 
           appliedDb.applied.push({
             jobId: job.url,
@@ -103,6 +110,10 @@ function saveAppliedJobs(data) {
             category: analysis.category,
             resumeUsed: analysis.resumeName,
             matchScore: analysis.matchScore,
+            matchedSkills: analysis.matchedSkills || [],
+            missingSkills: analysis.missingSkills || [],
+            aiReasoning: analysis.reasoning || '',
+            aiEnhanced: analysis.aiEnhanced || false,
             appliedAt: new Date().toISOString(),
             status: IS_DRY_RUN ? 'PREVIEW_DRY_RUN' : 'APPLIED',
           });
