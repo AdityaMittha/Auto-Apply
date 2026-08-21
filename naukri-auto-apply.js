@@ -54,12 +54,14 @@ function sleep(ms) {
   const appliedUrls = new Set(appliedDb.applied.map(a => a.url));
   const appliedJobIds = new Set(appliedDb.applied.map(a => a.jobId));
 
+  const IS_LINUX = process.platform === 'linux';
   const ctx = await chromium.launchPersistentContext(PROFILE_DIR, {
-    channel: 'chrome',
+    channel: IS_LINUX ? 'chromium' : 'chrome',
     headless: false,
     viewport: { width: 1280, height: 850 },
     args: [
       '--disable-blink-features=AutomationControlled',
+      ...(IS_LINUX ? ['--no-sandbox', '--disable-gpu', '--disable-dev-shm-usage'] : []),
       ...(VISIBLE_MODE ? [] : ['--window-position=-32000,-32000']),
     ],
   });
