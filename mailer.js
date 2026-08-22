@@ -123,8 +123,8 @@ function buildHtmlReport(jobs) {
       ? `<div style="font-size: 11px; color: #2563eb; margin-top: 2px;">✉️ ${job.recruiterEmail}</div>`
       : '';
 
-    // Direct clickable link: S3 pre-signed URL if available, otherwise direct GitHub link
-    const directResumeUrl = job.s3Url || `https://github.com/AdityaMittha/Auto-Apply/blob/main/resume/${encodeURIComponent(resumeDisplay)}`;
+    // Direct clickable link: S3 pre-signed URL if available, otherwise direct Raw GitHub link for in-browser PDF viewing
+    const directResumeUrl = job.s3Url || `https://raw.githubusercontent.com/AdityaMittha/Auto-Apply/main/resume/${encodeURIComponent(resumeDisplay)}`;
 
     const resumeLinkHtml = `
       <a href="${directResumeUrl}" target="_blank" style="display: inline-block; background: #2563eb; color: #ffffff; padding: 5px 11px; border-radius: 6px; text-decoration: none; font-size: 12px; font-weight: 600; box-shadow: 0 1px 2px rgba(0,0,0,0.08);">
