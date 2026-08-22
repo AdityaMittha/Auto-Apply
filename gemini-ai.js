@@ -18,13 +18,13 @@ const https = require('https');
  */
 function callGemini(prompt, apiKey, opts = {}) {
   const {
-    maxTokens = 1000,
+    maxTokens = 2048,
     temperature = 0.2,
     timeoutMs = 15000,
     retries = 1,
   } = opts;
 
-  const model = process.env.GEMINI_MODEL || 'gemini-flash-latest';
+  const model = process.env.GEMINI_MODEL || 'gemini-3.6-flash';
 
   const body = JSON.stringify({
     contents: [{ parts: [{ text: prompt }] }],
@@ -52,8 +52,9 @@ function callGemini(prompt, apiKey, opts = {}) {
           res.on('end', () => {
             try {
               const parsed = JSON.parse(data);
-              const text =
-                parsed.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
+              const parts = parsed.candidates?.[0]?.content?.parts || [];
+              const textObj = parts.find(p => p.text && typeof p.text === 'string') || parts[0];
+              const text = textObj?.text?.trim();
               resolve(text || null);
             } catch {
               resolve(null);
@@ -235,45 +236,81 @@ Answer directly — no explanations, no quotes around the answer, no preamble.`;
 }
 
 /**
- * AI-Powered Resume Summary Tailoring.
+ * AI-Powered Humanized ATS Resume Tailoring.
  *
- * Rewrites the resume Summary section to emphasize skills/experience
- * relevant to the specific JD. Returns plain text.
+ * Rewrites the resume Summary & Skills to match the JD with zero AI clichés.
+ * Strictly uses active verbs, concrete metrics (9.27 CGPA, ESP32, FreeRTOS, etc.),
+ * and natural human engineer syntax.
  *
- * @param {string} jdText - Job description text
- * @param {string} currentSummary - Current resume summary
- * @param {object} cv - CV object from config.js
- * @param {string} apiKey - Gemini API key
- * @returns {Promise<string|null>} Tailored summary or null on failure
+ * @param {object} params - { title, jdText, currentSummary, category, cv, apiKey }
+ * @returns {Promise<{ summary: string, highlightedSkills: string[], projectFocus: string }|null>}
  */
-async function tailorResumeSummary(jdText, currentSummary, cv, apiKey) {
+async function tailorFullResume({ title = '', jdText = '', currentSummary = '', category = 'embedded', cv = {}, apiKey = '' }) {
   if (!apiKey) return null;
 
-  const truncatedJD = jdText.length > 1500 ? jdText.substring(0, 1500) + '...' : jdText;
+  const cvContext = formatCVContext(cv);
+  const truncatedJD = jdText.length > 2000 ? jdText.substring(0, 2000) + '...' : jdText;
 
-  const prompt = `Rewrite this resume summary to better match the job description below. Keep it factual — only mention skills and experience the candidate actually has. Keep it 2-3 sentences, professional, and ATS-friendly.
+  const prompt = `You are an expert resume writer tailoring a resume for an Indian electronics and software engineering student.
+Your goal is to tailor the candidate's Summary and Skills to achieve a 95%+ ATS keyword match for the target job while sounding 100% human, authentic, and technically grounded.
 
-CURRENT SUMMARY:
-${currentSummary}
+CANDIDATE FACTUAL BACKGROUND (DO NOT INVENT FAKE DATA):
+Name: Aditya Mittha | Location: Solapur / Pune, India
+Education: B.Tech in Electronics & Telecommunication, Walchand Institute Of Technology (CGPA: 9.27, Graduating 2027)
+Internship: Embedded Systems Intern at Codec Technologies India (UART, I2C, Embedded C on MCUs)
+Key Projects:
+- LabPulse: Python background telemetry agent, AWS Serverless (Lambda, DynamoDB, API Gateway), Docker CI/CD
+- AQUANOVA: ESP32 smart water pressure monitor, MQTT QoS 1 telemetry, ML anomaly detection
+- SORTIFY: Raspberry Pi automated sorting system, Computer Vision, IoT dashboard
+Core Skills: ${cv.skills || 'Embedded C, Python, FreeRTOS, ESP32, ARM Cortex-M, UART, I2C, SPI, CAN, MQTT, AWS, Docker, Linux, Git'}
 
-CANDIDATE SKILLS: ${cv.skills}
-CANDIDATE EXPERIENCE: ${cv.yearsOfExperience}
-CANDIDATE EDUCATION: ${cv.education}
-
-JOB DESCRIPTION:
+TARGET JOB TITLE: ${title}
+TARGET JOB DESCRIPTION:
 ${truncatedJD}
 
-Return ONLY the rewritten summary text. No quotes, no labels, no preamble.`;
+STRICT WRITING RULES TO AVOID AI FOOTPRINTS:
+1. NEVER use AI buzzwords or cliché corporate filler:
+   BANNED WORDS: "spearheaded", "testament", "delve", "tapestry", "foster", "synergy", "cutting-edge", "multifaceted", "holistic", "dynamic landscape", "passionate", "thrilled", "esteemed", "proven track record", "demonstrated aptitude", "harnessing", "unwavering".
+2. Use active, direct engineer phrasing: "Built", "Engineered", "Implemented", "Configured", "Debugged", "Integrated", "Developed".
+3. Summary must be strictly 2 to 3 sentences long. Mention 9.27 CGPA, Walchand, and exact technical tools required by the JD.
+4. Highlighted skills must only include technologies the candidate actually knows that match the JD.
+
+Respond ONLY with valid JSON (no markdown, no code fences):
+{
+  "summary": "<2-3 sentence punchy humanized summary tailored to the JD>",
+  "highlightedSkills": ["skill1", "skill2", "skill3", "skill4", "skill5", "skill6"],
+  "projectFocus": "<LabPulse|AQUANOVA|Codec Technologies|SORTIFY>"
+}`;
 
   try {
     const raw = await callGemini(prompt, apiKey, {
-      maxTokens: 1000,
-      temperature: 0.3,
+      maxTokens: 2048,
+      temperature: 0.2,
     });
-    return raw ? raw.trim() : null;
+    if (!raw) return null;
+
+    const cleaned = raw.replace(/```json\s*/gi, '').replace(/```\s*/gi, '').trim();
+    const result = JSON.parse(cleaned);
+
+    if (result && result.summary && result.summary.length > 40) {
+      return {
+        summary: result.summary.trim(),
+        highlightedSkills: Array.isArray(result.highlightedSkills) ? result.highlightedSkills : [],
+        projectFocus: result.projectFocus || 'Codec Technologies',
+      };
+    }
+    return null;
   } catch {
     return null;
   }
+}
+
+/**
+ * Legacy wrapper for summary tailoring
+ */
+async function tailorResumeSummary(jdText, currentSummary, cv, apiKey) {
+  const full = await tailorFullResume({ jdText, currentSummary, cv, apiKey });
+  return full ? full.summary : null;
 }
 
 module.exports = {
@@ -281,5 +318,7 @@ module.exports = {
   analyzeJobWithAI,
   answerScreeningQuestion,
   tailorResumeSummary,
+  tailorFullResume,
   formatCVContext,
 };
+

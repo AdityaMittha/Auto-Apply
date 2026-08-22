@@ -1,16 +1,17 @@
 /**
  * Resume Compiler Module
  * 
- * Dynamically tailors the LaTeX resume summary to match specific Job Descriptions (JDs),
- * compiles the customized LaTeX into a clean PDF using pdflatex, and returns the path to the PDF.
- * Falls back gracefully to static base PDFs if LaTeX compilation or AI tailoring is unavailable.
+ * Dynamically tailors the LaTeX resume Summary, Skills, and Projects per Job Description (JD),
+ * compiles the customized LaTeX into a clean ATS-friendly PDF using pdflatex,
+ * uploads to Amazon S3, and generates secure pre-signed download URLs.
  */
 
 const fs = require('fs');
 const path = require('path');
 const { execSync } = require('child_process');
-const { tailorResumeSummary } = require('./gemini-ai');
+const { tailorFullResume } = require('./gemini-ai');
 const { CV, geminiKey, aiConfig } = require('./config');
+const { uploadFile, getPresignedDownloadUrl, S3_BUCKET } = require('./s3-storage');
 
 const RESUME_DIR = path.join(__dirname, 'resume');
 const TAILORED_DIR = path.join(RESUME_DIR, 'tailored');
@@ -80,7 +81,7 @@ function getLatexEngine() {
 }
 
 /**
- * Tailors LaTeX resume and compiles it to PDF.
+ * Tailors LaTeX resume and compiles it to PDF, uploading to S3 if available.
  *
  * @param {object} params
  * @param {string} params.jobId - Unique job identifier or clean title
@@ -89,7 +90,7 @@ function getLatexEngine() {
  * @param {string} params.category - 'embedded' | 'python_devops' | 'general'
  * @param {object} [params.cv] - CV profile data
  * @param {string} [params.apiKey] - Gemini API Key
- * @returns {Promise<{ pdfPath: string, texPath: string|null, tailoredSummary: string, isTailored: boolean }>}
+ * @returns {Promise<{ pdfPath: string, s3Key: string|null, s3Url: string|null, texPath: string|null, tailoredSummary: string, isTailored: boolean }>}
  */
 async function tailorAndCompileResume({
   jobId = '',
@@ -111,13 +112,20 @@ async function tailorAndCompileResume({
 
   const targetPdf = path.join(TAILORED_DIR, `Resume_${normCategory}_${cleanId}.pdf`);
   const targetTex = path.join(TAILORED_DIR, `Resume_${normCategory}_${cleanId}.tex`);
+  const s3Key = `resumes/tailored/Resume_${normCategory}_${cleanId}.pdf`;
 
-  // If already compiled for this exact jobId, reuse it
+  // If already compiled for this exact jobId, reuse it and generate S3 presigned URL
   if (fs.existsSync(targetPdf) && fs.statSync(targetPdf).size > 1000) {
+    let s3Url = null;
+    try {
+      s3Url = await getPresignedDownloadUrl(s3Key);
+    } catch {}
     return {
       pdfPath: targetPdf,
+      s3Key,
+      s3Url,
       texPath: fs.existsSync(targetTex) ? targetTex : null,
-      tailoredSummary: '(Cached tailored summary)',
+      tailoredSummary: '(Cached tailored resume)',
       isTailored: true,
     };
   }
@@ -126,6 +134,8 @@ async function tailorAndCompileResume({
   if (!fs.existsSync(baseTexPath)) {
     return {
       pdfPath: staticPdf,
+      s3Key: null,
+      s3Url: null,
       texPath: null,
       tailoredSummary: '',
       isTailored: false,
@@ -136,28 +146,38 @@ async function tailorAndCompileResume({
   const originalSummary = extractSummaryFromTex(texContent);
 
   let tailoredSummary = originalSummary;
+  let highlightedSkills = [];
   let isTailored = false;
 
-  // Tailor summary using Gemini AI if enabled
-  if (aiConfig.enabled && apiKey && jdText && jdText.length > 30) {
+  // Full AI Tailoring with Anti-AI Footprint Guardrails
+  if (aiConfig.enabled && apiKey && jdText && jdText.length > 20) {
     try {
-      const aiSummary = await tailorResumeSummary(jdText, originalSummary, cv, apiKey);
-      if (aiSummary && aiSummary.length > 50) {
-        tailoredSummary = aiSummary;
+      const aiResult = await tailorFullResume({
+        title: jobTitle,
+        jdText,
+        currentSummary: originalSummary,
+        category: normCategory,
+        cv,
+        apiKey,
+      });
+
+      if (aiResult && aiResult.summary && aiResult.summary.length > 30) {
+        tailoredSummary = aiResult.summary;
+        highlightedSkills = aiResult.highlightedSkills || [];
         isTailored = true;
       }
     } catch {
-      // Fallback to original summary
       tailoredSummary = originalSummary;
     }
   }
 
-  // If not tailored and no compile needed, return static
   const engine = getLatexEngine();
   if (!engine) {
-    // No LaTeX compiler on system, return static PDF
+    // No compiler available on system, return static PDF
     return {
       pdfPath: staticPdf,
+      s3Key: null,
+      s3Url: null,
       texPath: null,
       tailoredSummary,
       isTailored: false,
@@ -165,12 +185,21 @@ async function tailorAndCompileResume({
   }
 
   try {
-    // Replace summary section in LaTeX template
+    // 1. Replace summary section
     const escapedSummary = escapeLatex(tailoredSummary);
-    const updatedTex = texContent.replace(
+    let updatedTex = texContent.replace(
       /(\\section\{Summary\}\s*(?:\\small\s*)?)([\s\S]*?)(?=\\vspace|\\section)/i,
       `$1${escapedSummary}\n\n`
     );
+
+    // 2. If highlighted skills are found, inject them prominently into skills section
+    if (highlightedSkills.length > 0) {
+      const skillsStr = highlightedSkills.map(escapeLatex).join(', ');
+      updatedTex = updatedTex.replace(
+        /(\\item\s*\\textbf\{(?:Core Skills|Programming Languages|Skills)\:\}\s*)([^\n]+)/i,
+        `$1${skillsStr}, $2`
+      );
+    }
 
     fs.writeFileSync(targetTex, updatedTex, 'utf8');
 
@@ -178,7 +207,7 @@ async function tailorAndCompileResume({
     const compileCmd = `${engine} -interaction=nonstopmode -output-directory="${TAILORED_DIR}" "${targetTex}"`;
     execSync(compileCmd, { stdio: 'ignore', timeout: 20000 });
 
-    // Clean up auxiliary files generated by LaTeX (.aux, .log, .out)
+    // Clean up auxiliary files
     const baseName = path.basename(targetTex, '.tex');
     ['.aux', '.log', '.out', '.toc'].forEach(ext => {
       const auxFile = path.join(TAILORED_DIR, `${baseName}${ext}`);
@@ -188,19 +217,30 @@ async function tailorAndCompileResume({
     });
 
     if (fs.existsSync(targetPdf) && fs.statSync(targetPdf).size > 1000) {
+      // Upload to S3 asynchronously / best effort
+      let s3Url = null;
+      try {
+        await uploadFile(targetPdf, s3Key, 'application/pdf');
+        s3Url = await getPresignedDownloadUrl(s3Key);
+      } catch {}
+
       return {
         pdfPath: targetPdf,
+        s3Key,
+        s3Url,
         texPath: targetTex,
         tailoredSummary,
         isTailored,
       };
     }
   } catch (err) {
-    // Fall back to static PDF if compilation failed
+    // Fall back to static PDF if compilation fails
   }
 
   return {
     pdfPath: staticPdf,
+    s3Key: null,
+    s3Url: null,
     texPath: null,
     tailoredSummary,
     isTailored: false,

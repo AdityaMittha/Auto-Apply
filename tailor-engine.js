@@ -138,6 +138,8 @@ async function analyzeJob(title = '', jdText = '', requiredSkills = [], opts = {
   // Step 3: Compile / Select Tailored Resume
   let selectedResume = RESUMES[finalCategory] || RESUMES.default;
   let tailoredResumePath = selectedResume;
+  let s3Key = null;
+  let s3Url = null;
   let isTailored = false;
 
   try {
@@ -152,6 +154,8 @@ async function analyzeJob(title = '', jdText = '', requiredSkills = [], opts = {
     if (tailoredRes && tailoredRes.pdfPath) {
       tailoredResumePath = tailoredRes.pdfPath;
       selectedResume = tailoredRes.pdfPath;
+      s3Key = tailoredRes.s3Key || null;
+      s3Url = tailoredRes.s3Url || null;
       isTailored = tailoredRes.isTailored;
     }
   } catch {}
@@ -162,6 +166,8 @@ async function analyzeJob(title = '', jdText = '', requiredSkills = [], opts = {
     matchedKeywords: kwResult.matchedKeywords,
     selectedResume,
     tailoredResumePath,
+    s3Key,
+    s3Url,
     resumeName: path.basename(selectedResume),
     isTailored,
     // AI-enhanced fields

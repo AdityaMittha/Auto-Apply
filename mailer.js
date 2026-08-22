@@ -1,11 +1,13 @@
 /**
  * Daily Application Mailer — Compiles all jobs and internships applied today,
- * attaches tailored resume PDFs used for applications, and emails an HTML summary digest.
+ * generates pre-signed S3 download links for every tailored resume,
+ * and emails an HTML summary digest to adityamittha09@gmail.com without heavy attachments.
  */
 const fs = require('fs');
 const path = require('path');
 const nodemailer = require('nodemailer');
 const { CV } = require('./config');
+const { getPresignedDownloadUrl, uploadFile } = require('./s3-storage');
 
 const APPLIED_FILE = path.join(__dirname, 'applied-jobs.json');
 const LOG_FILE = path.join(__dirname, 'naukri-applications.log');
@@ -72,6 +74,24 @@ function resolveResumePath(job) {
   return fs.existsSync(defaultEmbed) ? defaultEmbed : null;
 }
 
+/**
+ * Populates / refreshes pre-signed S3 download URLs for all today's applications.
+ */
+async function attachS3Urls(jobs) {
+  for (const job of jobs) {
+    if (!job.s3Url) {
+      const localPath = resolveResumePath(job);
+      const s3Key = job.s3Key || (localPath ? `resumes/tailored/${path.basename(localPath)}` : null);
+      if (localPath && s3Key) {
+        try {
+          await uploadFile(localPath, s3Key, 'application/pdf');
+          job.s3Url = await getPresignedDownloadUrl(s3Key);
+        } catch {}
+      }
+    }
+  }
+}
+
 function buildHtmlReport(jobs) {
   const todayFormatted = new Date().toLocaleDateString('en-IN', {
     weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
@@ -79,8 +99,7 @@ function buildHtmlReport(jobs) {
 
   const embeddedCount = jobs.filter(j => j.category === 'embedded').length;
   const pythonCount = jobs.filter(j => j.category === 'python_devops').length;
-  const tailoredCount = jobs.filter(j => j.isTailored || j.aiEnhanced).length;
-  const viewedCount = jobs.filter(j => /view|shortlist|action/i.test(j.status || '')).length;
+  const tailoredCount = jobs.filter(j => j.isTailored || j.aiEnhanced || (j.tailoredResumePath && j.tailoredResumePath.includes('tailored'))).length;
   const avgScore = jobs.length > 0 ? Math.round(jobs.reduce((acc, j) => acc + (j.matchScore || 0), 0) / jobs.length) : 0;
 
   const rows = jobs.map((job, idx) => {
@@ -97,12 +116,16 @@ function buildHtmlReport(jobs) {
     const time = new Date(job.appliedAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
     const resumeDisplay = job.resumeUsed || 'Mittha_Aditya_Embedded.pdf';
     const isTailoredBadge = (job.isTailored || (job.tailoredResumePath && job.tailoredResumePath.includes('tailored')))
-      ? `<span style="background: #ecfdf5; color: #059669; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 600; margin-left: 4px;">✨ Tailored</span>`
+      ? `<span style="background: #ecfdf5; color: #059669; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 600; margin-left: 4px;">✨ ATS Tailored</span>`
       : '';
 
     const recruiterInfo = job.recruiterEmail
       ? `<div style="font-size: 11px; color: #2563eb; margin-top: 2px;">✉️ ${job.recruiterEmail}</div>`
       : '';
+
+    const resumeLinkHtml = job.s3Url
+      ? `<a href="${job.s3Url}" target="_blank" style="display: inline-block; background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; padding: 4px 10px; border-radius: 6px; text-decoration: none; font-size: 12px; font-weight: 600;">View Resume ↗</a>`
+      : `<span style="font-size: 12px; color: #6b7280;">📄 ${resumeDisplay}</span>`;
 
     return `
       <tr style="border-bottom: 1px solid #e5e7eb;">
@@ -121,8 +144,9 @@ function buildHtmlReport(jobs) {
             ${job.matchScore || 50}% Match
           </span>
         </td>
-        <td style="padding: 12px 14px; font-size: 13px; color: #4b5563;">
-          📄 ${resumeDisplay} ${isTailoredBadge}
+        <td style="padding: 12px 14px; text-align: center;">
+          ${resumeLinkHtml}
+          ${isTailoredBadge ? `<div style="margin-top: 3px;">${isTailoredBadge}</div>` : ''}
         </td>
         <td style="padding: 12px 14px; text-align: center;">
           <span style="background: ${statusColor}15; color: ${statusColor}; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: 600;">
@@ -131,7 +155,7 @@ function buildHtmlReport(jobs) {
           <div style="font-size: 11px; color: #9ca3af; margin-top: 2px;">${time}</div>
         </td>
         <td style="padding: 12px 14px; text-align: center;">
-          ${job.url ? `<a href="${job.url}" target="_blank" style="color: #2563eb; text-decoration: none; font-weight: 500; font-size: 13px;">View ↗</a>` : '-'}
+          ${job.url ? `<a href="${job.url}" target="_blank" style="color: #2563eb; text-decoration: none; font-weight: 500; font-size: 13px;">View Job ↗</a>` : '-'}
         </td>
       </tr>
     `;
@@ -145,12 +169,12 @@ function buildHtmlReport(jobs) {
     <title>Daily Applications Report - Aditya Mittha</title>
   </head>
   <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f9fafb; margin: 0; padding: 24px; color: #111827;">
-    <div style="max-width: 860px; margin: 0 auto; background: #ffffff; border-radius: 12px; border: 1px solid #e5e7eb; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);">
+    <div style="max-width: 880px; margin: 0 auto; background: #ffffff; border-radius: 12px; border: 1px solid #e5e7eb; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);">
       
       <!-- Header -->
       <div style="background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%); padding: 28px 32px; color: #ffffff;">
         <h1 style="margin: 0 0 6px 0; font-size: 22px; font-weight: 700;">🎯 Daily Job & Internship Applications Report</h1>
-        <p style="margin: 0; font-size: 14px; color: #bfdbfe;">Summary for ${todayFormatted} • Candidate: <strong>Aditya Mittha</strong></p>
+        <p style="margin: 0; font-size: 14px; color: #bfdbfe;">Summary for ${todayFormatted} • Candidate: <strong>Aditya Mittha</strong> (8:00 PM IST Digest)</p>
       </div>
 
       <!-- Stats Banner -->
@@ -169,7 +193,7 @@ function buildHtmlReport(jobs) {
         </div>
         <div style="flex: 1; text-align: center; border-right: 1px solid #e2e8f0;">
           <div style="font-size: 26px; font-weight: 700; color: #059669;">${tailoredCount}</div>
-          <div style="font-size: 11px; text-transform: uppercase; color: #64748b; font-weight: 600; margin-top: 2px;">AI-Tailored</div>
+          <div style="font-size: 11px; text-transform: uppercase; color: #64748b; font-weight: 600; margin-top: 2px;">ATS Tailored</div>
         </div>
         <div style="flex: 1; text-align: center;">
           <div style="font-size: 26px; font-weight: 700; color: #10b981;">${avgScore}%</div>
@@ -194,7 +218,7 @@ function buildHtmlReport(jobs) {
                   <th style="padding: 10px 14px;">Role & Company</th>
                   <th style="padding: 10px 14px; text-align: center;">Portal</th>
                   <th style="padding: 10px 14px; text-align: center;">Match</th>
-                  <th style="padding: 10px 14px;">Resume Used</th>
+                  <th style="padding: 10px 14px; text-align: center;">Tailored Resume</th>
                   <th style="padding: 10px 14px; text-align: center;">Status</th>
                   <th style="padding: 10px 14px; text-align: center;">Link</th>
                 </tr>
@@ -210,7 +234,7 @@ function buildHtmlReport(jobs) {
       <!-- Footer -->
       <div style="background: #f8fafc; padding: 18px 32px; border-top: 1px solid #e5e7eb; font-size: 12px; color: #64748b; text-align: center;">
         Generated automatically by your <strong>Antigravity Auto-Apply & Tailoring Engine</strong> for Aditya Mittha.
-        <br><span style="color: #9ca3af; font-size: 11px;">📎 Tailored resume PDFs attached to this email.</span>
+        <br><span style="color: #6b7280; font-size: 11px;">🔒 Resumes are stored on Amazon S3 and accessible via secure pre-signed download links.</span>
       </div>
     </div>
   </body>
@@ -223,6 +247,10 @@ async function sendDailyReport() {
   const jobs = getTodayApplications();
 
   log(`Preparing daily application report (${jobs.length} applications found)...`);
+  
+  // Attach/refresh S3 download links for today's jobs
+  await attachS3Urls(jobs);
+
   const htmlContent = buildHtmlReport(jobs);
 
   // Write preview HTML file
@@ -249,47 +277,17 @@ async function sendDailyReport() {
     },
   });
 
-  // Collect resume attachments for the applied jobs (up to 5 to avoid attachment size bloat)
-  const attachments = [];
-  const attachedPaths = new Set();
-
-  for (const job of jobs) {
-    if (attachments.length >= 5) break;
-    const rPath = resolveResumePath(job);
-    if (rPath && fs.existsSync(rPath) && !attachedPaths.has(rPath)) {
-      attachedPaths.add(rPath);
-      const cleanCompany = (job.company || 'Role').replace(/[^a-zA-Z0-9]+/g, '_').slice(0, 20);
-      attachments.push({
-        filename: `Resume_${cleanCompany}_${job.category || 'Embedded'}.pdf`,
-        path: rPath,
-        contentType: 'application/pdf',
-      });
-    }
-  }
-
-  // Fallback: Always attach at least the base embedded resume if none attached yet
-  if (attachments.length === 0) {
-    const defaultResume = path.join(RESUME_DIR, 'Mittha_Aditya_Embedded.pdf');
-    if (fs.existsSync(defaultResume)) {
-      attachments.push({
-        filename: 'Mittha_Aditya_Embedded.pdf',
-        path: defaultResume,
-        contentType: 'application/pdf',
-      });
-    }
-  }
-
   const mailOptions = {
     from: `"Antigravity Job Engine" <${SMTP_USER}>`,
     to: RECIPIENT,
     subject: `🎯 Daily Applications Summary: ${jobs.length} Jobs/Internships Applied (${new Date().toLocaleDateString()})`,
     html: htmlContent,
-    attachments,
+    // No file attachments — only direct S3 download links in the email body
   };
 
   try {
     const info = await transporter.sendMail(mailOptions);
-    log(`✅ Daily report successfully sent to ${RECIPIENT} with ${attachments.length} resume attachment(s) (MessageId: ${info.messageId})`);
+    log(`✅ Daily report successfully sent to ${RECIPIENT} with secure resume links (MessageId: ${info.messageId})`);
   } catch (err) {
     log(`❌ Failed to send email: ${err.message}`);
     log(`HTML report is preserved at: ${PREVIEW_FILE}`);
@@ -305,4 +303,5 @@ module.exports = {
   buildHtmlReport,
   getTodayApplications,
   resolveResumePath,
+  attachS3Urls,
 };
