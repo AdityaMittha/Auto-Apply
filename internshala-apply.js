@@ -5,7 +5,7 @@
 const { chromium } = require('playwright-core');
 const path = require('path');
 const fs = require('fs');
-const { CV, autoApplyConfig, geminiKey, aiConfig } = require('./config');
+const { CV, autoApplyConfig, geminiKey, aiConfig, isLocationAllowed } = require('./config');
 const { analyzeJob } = require('./tailor-engine');
 
 const PROFILE_DIR = path.join(__dirname, '.internshala-chrome-profile');
@@ -104,6 +104,12 @@ const INTERNSHALA_SLUGS = [
 
           log(`-------------------------------------------------------`);
           log(`Evaluating: ${item.title} at ${item.company} (${item.location})`);
+
+          // Location filter — skip internships not in Pune/Remote/Solapur
+          if (!isLocationAllowed(item.location)) {
+            log(`   ⏭️ Skipped: Location "${item.location}" not in allowed list (Pune/Remote/Solapur).`);
+            continue;
+          }
 
           // Fetch full JD from internship detail page
           let fullJd = `${item.title} ${item.location}`;

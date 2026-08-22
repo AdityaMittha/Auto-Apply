@@ -4,7 +4,7 @@
 const { chromium } = require('playwright-core');
 const path = require('path');
 const fs = require('fs');
-const { CV, autoApplyConfig, geminiKey, aiConfig } = require('./config');
+const { CV, autoApplyConfig, geminiKey, aiConfig, isLocationAllowed } = require('./config');
 const { analyzeJob } = require('./tailor-engine');
 
 const PROFILE_DIR = path.join(__dirname, '.foundit-chrome-profile');
@@ -61,7 +61,7 @@ function saveAppliedJobs(data) {
     for (const keyword of autoApplyConfig.keywords.slice(0, 3)) {
       if (processedCount >= autoApplyConfig.maxPerRun) break;
 
-      const searchUrl = `https://www.foundit.in/srp/results?query=${encodeURIComponent(keyword)}&locations=Pune,Bangalore,Hyderabad&experienceRanges=0~1`;
+      const searchUrl = `https://www.foundit.in/srp/results?query=${encodeURIComponent(keyword)}&locations=Pune,Solapur&experienceRanges=0~1`;
       log(`🔍 Searching Foundit: "${keyword}" -> ${searchUrl}`);
 
       try {
@@ -91,13 +91,20 @@ function saveAppliedJobs(data) {
           if (processedCount >= autoApplyConfig.maxPerRun) break;
           if (appliedUrls.has(job.url)) continue;
 
+          log(`-------------------------------------------------------`);
+          log(`Evaluating: ${job.title} at ${job.company} (${job.location})`);
+
+          // Location filter — skip jobs not in Pune/Remote/Solapur
+          if (!isLocationAllowed(job.location)) {
+            log(`   ⏭️ Skipped: Location "${job.location}" not in allowed list (Pune/Remote/Solapur).`);
+            continue;
+          }
+
           const analysis = await analyzeJob(job.title, `${job.title} ${job.company} ${job.location}`, [], {
             cv: CV,
             geminiKey,
             aiEnabled: aiConfig.enabled,
           });
-          log(`-------------------------------------------------------`);
-          log(`Evaluating: ${job.title} at ${job.company} (${job.location})`);
           log(`   Category: [${analysis.category.toUpperCase()}] | Score: ${analysis.matchScore}% | Resume: ${analysis.resumeName} ${analysis.aiEnhanced ? '🤖 AI' : '🔑 Keyword'}`);
           if (analysis.aiEnhanced && analysis.reasoning) {
             log(`   💡 ${analysis.reasoning}`);

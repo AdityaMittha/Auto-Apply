@@ -15,5 +15,13 @@ daily-report-preview.html
 # resume / personal docs
 *.pdf
 
+# AWS deployment
+.deploy-info
+*.pem
+
 # deps
 node_modules/
+
+# tailored resumes cache
+resume/tailored/
+

@@ -6,7 +6,7 @@
 const { chromium } = require('playwright-core');
 const path = require('path');
 const fs = require('fs');
-const { CV, autoApplyConfig, geminiKey, aiConfig } = require('./config');
+const { CV, autoApplyConfig, geminiKey, aiConfig, isLocationAllowed } = require('./config');
 const { analyzeJob, answerQuestion } = require('./tailor-engine');
 
 const PROFILE_DIR = path.join(__dirname, '.linkedin-chrome-profile');
@@ -100,6 +100,13 @@ function saveAppliedJobs(data) {
 
             log(`-------------------------------------------------------`);
             log(`Evaluating: ${job.title} at ${job.company} (${job.location})`);
+
+            // Location filter — skip jobs not in Pune/Remote/Solapur
+            if (!isLocationAllowed(job.location)) {
+              log(`   ⏭️ Skipped: Location "${job.location}" not in allowed list (Pune/Remote/Solapur).`);
+              if (jobPage) await jobPage.close().catch(() => {});
+              continue;
+            }
 
             // Fetch full JD from job detail page
             let fullJd = `${job.title} ${job.company} ${job.location}`;

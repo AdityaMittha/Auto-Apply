@@ -4,7 +4,7 @@
 const { chromium } = require('playwright-core');
 const path = require('path');
 const fs = require('fs');
-const { CV, autoApplyConfig, geminiKey, aiConfig } = require('./config');
+const { CV, autoApplyConfig, geminiKey, aiConfig, isLocationAllowed } = require('./config');
 const { analyzeJob } = require('./tailor-engine');
 
 const PROFILE_DIR = path.join(__dirname, '.indeed-chrome-profile');
@@ -120,6 +120,13 @@ function saveAppliedJobs(data) {
             });
             log(`-------------------------------------------------------`);
             log(`Evaluating: ${job.title} at ${job.company} (${job.location})`);
+
+            // Location filter — skip jobs not in Pune/Remote/Solapur
+            if (!isLocationAllowed(job.location)) {
+              log(`   ⏭️ Skipped: Location "${job.location}" not in allowed list (Pune/Remote/Solapur).`);
+              if (jobPage) await jobPage.close().catch(() => {});
+              continue;
+            }
             log(`   Category: [${analysis.category.toUpperCase()}] | Score: ${analysis.matchScore}% | Resume: ${analysis.resumeName} ${analysis.aiEnhanced ? '🤖 AI' : '🔑 Keyword'}`);
             if (analysis.aiEnhanced && analysis.reasoning) {
               log(`   💡 ${analysis.reasoning}`);

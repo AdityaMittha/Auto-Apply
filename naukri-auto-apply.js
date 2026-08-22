@@ -6,7 +6,7 @@
 const { chromium } = require('playwright-core');
 const path = require('path');
 const fs = require('fs');
-const { CV, CREDS, geminiKey, autoApplyConfig, aiConfig } = require('./config');
+const { CV, CREDS, geminiKey, autoApplyConfig, aiConfig, isLocationAllowed } = require('./config');
 const { analyzeJob, answerQuestion } = require('./tailor-engine');
 
 const PROFILE_DIR = path.join(__dirname, '.naukri-chrome-profile');
@@ -127,6 +127,12 @@ function sleep(ms) {
             totalEvaluated++;
             log(`-------------------------------------------------------`);
             log(`[#${totalEvaluated}] Evaluating: ${job.title} | Company: ${job.company} | Loc: ${job.location}`);
+
+            // Location filter — skip jobs not in Pune/Remote/Solapur
+            if (!isLocationAllowed(job.location)) {
+              log(`   ⏭️ Skipped: Location "${job.location}" not in allowed list (Pune/Remote/Solapur).`);
+              continue;
+            }
 
             // Fetch full JD by opening job URL in a new tab
             let fullJd = job.snippet;

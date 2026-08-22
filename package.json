@@ -27,11 +27,18 @@
     "task:start": "powershell -Command Start-ScheduledTask -TaskName NaukriProfileRefresh",
     "task:register": "powershell -ExecutionPolicy Bypass -File ./register-task.ps1",
     "task:mail:status": "powershell -Command Get-ScheduledTask -TaskName DailyApplicationReport",
-    "task:mail:register": "powershell -ExecutionPolicy Bypass -File ./register-daily-mail.ps1"
+    "task:mail:register": "powershell -ExecutionPolicy Bypass -File ./register-daily-mail.ps1",
+    "status:check": "node status-tracker.js",
+    "status:check:visible": "node status-tracker.js visible",
+    "cold:mail": "node cold-mailer.js",
+    "cold:mail:dry": "node cold-mailer.js dry",
+    "s3:sync": "node -e \"require('./s3-storage').syncTailoredResumes()\""
   },
   "author": "Ankit Baghel",
   "license": "ISC",
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.750.0",
+    "@aws-sdk/s3-request-presigner": "^3.750.0",
     "nodemailer": "^9.0.5",
     "playwright-core": "^1.61.1"
   }

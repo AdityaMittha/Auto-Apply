@@ -11,6 +11,7 @@ const {
   answerScreeningQuestion,
   tailorResumeSummary,
 } = require('./gemini-ai');
+const { tailorAndCompileResume } = require('./resume-compiler');
 
 const RESUMES = {
   embedded: path.join(__dirname, 'resume', 'Mittha_Aditya_Embedded.pdf'),
@@ -105,40 +106,70 @@ function keywordAnalysis(title = '', jdText = '', requiredSkills = []) {
  * @returns {Promise<object>} Analysis result
  */
 async function analyzeJob(title = '', jdText = '', requiredSkills = [], opts = {}) {
-  const { cv, geminiKey, aiEnabled = true } = opts;
+  const { cv, geminiKey, aiEnabled = true, jobId = '' } = opts;
 
   // Step 1: Fast keyword analysis (always runs)
   const kwResult = keywordAnalysis(title, jdText, requiredSkills);
 
+  let finalCategory = kwResult.category;
+  let finalMatchScore = kwResult.matchScore;
+  let matchedSkills = [];
+  let missingSkills = [];
+  let reasoning = '';
+  let aiEnhanced = false;
+
   // Step 2: AI refinement (optional)
-  if (!aiEnabled || !geminiKey || !cv) {
-    return kwResult;
+  if (aiEnabled && geminiKey && cv) {
+    try {
+      const aiResult = await analyzeJobWithAI(title, jdText, cv, geminiKey);
+      if (aiResult) {
+        finalCategory = aiResult.category || kwResult.category;
+        finalMatchScore = aiResult.matchScore;
+        matchedSkills = aiResult.matchedSkills || [];
+        missingSkills = aiResult.missingSkills || [];
+        reasoning = aiResult.reasoning || '';
+        aiEnhanced = true;
+      }
+    } catch {
+      // AI failed — keep keyword results
+    }
   }
+
+  // Step 3: Compile / Select Tailored Resume
+  let selectedResume = RESUMES[finalCategory] || RESUMES.default;
+  let tailoredResumePath = selectedResume;
+  let isTailored = false;
 
   try {
-    const aiResult = await analyzeJobWithAI(title, jdText, cv, geminiKey);
-    if (!aiResult) return kwResult;
+    const tailoredRes = await tailorAndCompileResume({
+      jobId: jobId || title,
+      jobTitle: title,
+      jdText,
+      category: finalCategory,
+      cv,
+      apiKey: geminiKey,
+    });
+    if (tailoredRes && tailoredRes.pdfPath) {
+      tailoredResumePath = tailoredRes.pdfPath;
+      selectedResume = tailoredRes.pdfPath;
+      isTailored = tailoredRes.isTailored;
+    }
+  } catch {}
 
-    // Merge: Use AI score but keep keyword-selected resume
-    const category = aiResult.category || kwResult.category;
-    const selectedResume = RESUMES[category] || RESUMES[kwResult.category] || RESUMES.default;
-
-    return {
-      category,
-      matchScore: aiResult.matchScore,
-      matchedKeywords: kwResult.matchedKeywords,
-      selectedResume,
-      resumeName: path.basename(selectedResume),
-      // AI-enhanced fields
-      matchedSkills: aiResult.matchedSkills,
-      missingSkills: aiResult.missingSkills,
-      reasoning: aiResult.reasoning,
-      aiEnhanced: true,
-    };
-  } catch {
-    // AI failed — return keyword-only result
-    return kwResult;
-  }
+  return {
+    category: finalCategory,
+    matchScore: finalMatchScore,
+    matchedKeywords: kwResult.matchedKeywords,
+    selectedResume,
+    tailoredResumePath,
+    resumeName: path.basename(selectedResume),
+    isTailored,
+    // AI-enhanced fields
+    matchedSkills,
+    missingSkills,
+    reasoning,
+    aiEnhanced,
+  };
 }
 
 /**

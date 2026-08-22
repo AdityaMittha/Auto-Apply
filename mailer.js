@@ -1,6 +1,6 @@
 /**
- * Daily Application Mailer — Compiles all jobs and internships applied today
- * and emails an HTML summary digest to adityamittha09@gmail.com.
+ * Daily Application Mailer — Compiles all jobs and internships applied today,
+ * attaches tailored resume PDFs used for applications, and emails an HTML summary digest.
  */
 const fs = require('fs');
 const path = require('path');
@@ -10,6 +10,8 @@ const { CV } = require('./config');
 const APPLIED_FILE = path.join(__dirname, 'applied-jobs.json');
 const LOG_FILE = path.join(__dirname, 'naukri-applications.log');
 const PREVIEW_FILE = path.join(__dirname, 'daily-report-preview.html');
+const RESUME_DIR = path.join(__dirname, 'resume');
+const TAILORED_DIR = path.join(RESUME_DIR, 'tailored');
 
 const log = (msg) => {
   const line = `[${new Date().toLocaleString()}] [MAILER] ${msg}`;
@@ -21,7 +23,7 @@ function loadEnv() {
   const envPath = path.join(__dirname, '.env');
   const out = {};
   if (!fs.existsSync(envPath)) return out;
-  for (const line of fs.readFileSync(envPath, 'utf8').replace(/^﻿/, '').split(/\r?\n/)) {
+  for (const line of fs.readFileSync(envPath, 'utf8').replace(/^\uFEFF/, '').split(/\r?\n/)) {
     if (!line.trim() || line.trim().startsWith('#')) continue;
     const m = line.match(/^\s*([A-Z0-9_]+)\s*=\s*(.*?)\s*$/);
     if (m) out[m[1]] = m[2];
@@ -53,6 +55,23 @@ function getTodayApplications() {
   }
 }
 
+/**
+ * Finds the absolute local file path for a job's resume.
+ */
+function resolveResumePath(job) {
+  if (job.tailoredResumePath && fs.existsSync(job.tailoredResumePath)) {
+    return job.tailoredResumePath;
+  }
+  if (job.resumeUsed) {
+    const directPath = path.join(RESUME_DIR, job.resumeUsed);
+    if (fs.existsSync(directPath)) return directPath;
+    const tailoredPath = path.join(TAILORED_DIR, job.resumeUsed);
+    if (fs.existsSync(tailoredPath)) return tailoredPath;
+  }
+  const defaultEmbed = path.join(RESUME_DIR, 'Mittha_Aditya_Embedded.pdf');
+  return fs.existsSync(defaultEmbed) ? defaultEmbed : null;
+}
+
 function buildHtmlReport(jobs) {
   const todayFormatted = new Date().toLocaleDateString('en-IN', {
     weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
@@ -60,20 +79,37 @@ function buildHtmlReport(jobs) {
 
   const embeddedCount = jobs.filter(j => j.category === 'embedded').length;
   const pythonCount = jobs.filter(j => j.category === 'python_devops').length;
+  const tailoredCount = jobs.filter(j => j.isTailored || j.aiEnhanced).length;
+  const viewedCount = jobs.filter(j => /view|shortlist|action/i.test(j.status || '')).length;
   const avgScore = jobs.length > 0 ? Math.round(jobs.reduce((acc, j) => acc + (j.matchScore || 0), 0) / jobs.length) : 0;
 
   const rows = jobs.map((job, idx) => {
     const portal = job.portal || 'Naukri';
-    const statusColor = job.status === 'APPLIED' ? '#10b981' : (job.status === 'PREVIEW_DRY_RUN' ? '#f59e0b' : '#6b7280');
+    let statusColor = '#6b7280';
+    const statusText = (job.status || 'APPLIED').toUpperCase();
+    if (statusText.includes('VIEW') || statusText.includes('ACTION')) statusColor = '#3b82f6';
+    else if (statusText.includes('SHORTLIST')) statusColor = '#8b5cf6';
+    else if (statusText.includes('APPLIED')) statusColor = '#10b981';
+    else if (statusText.includes('DRY_RUN')) statusColor = '#f59e0b';
+    else if (statusText.includes('REDIRECT')) statusColor = '#64748b';
+
     const badgeColor = job.category === 'embedded' ? '#3b82f6' : '#8b5cf6';
     const time = new Date(job.appliedAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+    const resumeDisplay = job.resumeUsed || 'Mittha_Aditya_Embedded.pdf';
+    const isTailoredBadge = (job.isTailored || (job.tailoredResumePath && job.tailoredResumePath.includes('tailored')))
+      ? `<span style="background: #ecfdf5; color: #059669; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 600; margin-left: 4px;">✨ Tailored</span>`
+      : '';
+
+    const recruiterInfo = job.recruiterEmail
+      ? `<div style="font-size: 11px; color: #2563eb; margin-top: 2px;">✉️ ${job.recruiterEmail}</div>`
+      : '';
 
     return `
       <tr style="border-bottom: 1px solid #e5e7eb;">
         <td style="padding: 12px 14px; text-align: center; color: #6b7280; font-weight: 600;">${idx + 1}</td>
         <td style="padding: 12px 14px;">
           <div style="font-weight: 600; color: #111827;">${job.title || 'Untitled Role'}</div>
-          <div style="font-size: 13px; color: #4b5563;">${job.company || 'Unknown Company'}</div>
+          <div style="font-size: 13px; color: #4b5563;">${job.company || 'Unknown Company'} ${recruiterInfo}</div>
         </td>
         <td style="padding: 12px 14px; text-align: center;">
           <span style="background: #f3f4f6; color: #374151; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: 500;">
@@ -86,7 +122,7 @@ function buildHtmlReport(jobs) {
           </span>
         </td>
         <td style="padding: 12px 14px; font-size: 13px; color: #4b5563;">
-          📄 ${job.resumeUsed || 'Mittha_Aditya_Embedded.pdf'}
+          📄 ${resumeDisplay} ${isTailoredBadge}
         </td>
         <td style="padding: 12px 14px; text-align: center;">
           <span style="background: ${statusColor}15; color: ${statusColor}; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: 600;">
@@ -109,7 +145,7 @@ function buildHtmlReport(jobs) {
     <title>Daily Applications Report - Aditya Mittha</title>
   </head>
   <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f9fafb; margin: 0; padding: 24px; color: #111827;">
-    <div style="max-width: 820px; margin: 0 auto; background: #ffffff; border-radius: 12px; border: 1px solid #e5e7eb; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);">
+    <div style="max-width: 860px; margin: 0 auto; background: #ffffff; border-radius: 12px; border: 1px solid #e5e7eb; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);">
       
       <!-- Header -->
       <div style="background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%); padding: 28px 32px; color: #ffffff;">
@@ -118,22 +154,26 @@ function buildHtmlReport(jobs) {
       </div>
 
       <!-- Stats Banner -->
-      <div style="display: flex; background: #f8fafc; padding: 20px 32px; border-bottom: 1px solid #e5e7eb; gap: 20px;">
+      <div style="display: flex; background: #f8fafc; padding: 20px 32px; border-bottom: 1px solid #e5e7eb; gap: 16px;">
         <div style="flex: 1; text-align: center; border-right: 1px solid #e2e8f0;">
-          <div style="font-size: 28px; font-weight: 700; color: #1e3a8a;">${jobs.length}</div>
-          <div style="font-size: 12px; text-transform: uppercase; color: #64748b; font-weight: 600; margin-top: 2px;">Total Processed</div>
+          <div style="font-size: 26px; font-weight: 700; color: #1e3a8a;">${jobs.length}</div>
+          <div style="font-size: 11px; text-transform: uppercase; color: #64748b; font-weight: 600; margin-top: 2px;">Total Today</div>
         </div>
         <div style="flex: 1; text-align: center; border-right: 1px solid #e2e8f0;">
-          <div style="font-size: 28px; font-weight: 700; color: #3b82f6;">${embeddedCount}</div>
-          <div style="font-size: 12px; text-transform: uppercase; color: #64748b; font-weight: 600; margin-top: 2px;">Embedded / Firmware</div>
+          <div style="font-size: 26px; font-weight: 700; color: #3b82f6;">${embeddedCount}</div>
+          <div style="font-size: 11px; text-transform: uppercase; color: #64748b; font-weight: 600; margin-top: 2px;">Embedded / IoT</div>
         </div>
         <div style="flex: 1; text-align: center; border-right: 1px solid #e2e8f0;">
-          <div style="font-size: 28px; font-weight: 700; color: #8b5cf6;">${pythonCount}</div>
-          <div style="font-size: 12px; text-transform: uppercase; color: #64748b; font-weight: 600; margin-top: 2px;">Python / DevOps</div>
+          <div style="font-size: 26px; font-weight: 700; color: #8b5cf6;">${pythonCount}</div>
+          <div style="font-size: 11px; text-transform: uppercase; color: #64748b; font-weight: 600; margin-top: 2px;">Python / DevOps</div>
+        </div>
+        <div style="flex: 1; text-align: center; border-right: 1px solid #e2e8f0;">
+          <div style="font-size: 26px; font-weight: 700; color: #059669;">${tailoredCount}</div>
+          <div style="font-size: 11px; text-transform: uppercase; color: #64748b; font-weight: 600; margin-top: 2px;">AI-Tailored</div>
         </div>
         <div style="flex: 1; text-align: center;">
-          <div style="font-size: 28px; font-weight: 700; color: #10b981;">${avgScore}%</div>
-          <div style="font-size: 12px; text-transform: uppercase; color: #64748b; font-weight: 600; margin-top: 2px;">Avg Match Score</div>
+          <div style="font-size: 26px; font-weight: 700; color: #10b981;">${avgScore}%</div>
+          <div style="font-size: 11px; text-transform: uppercase; color: #64748b; font-weight: 600; margin-top: 2px;">Avg Match</div>
         </div>
       </div>
 
@@ -154,7 +194,7 @@ function buildHtmlReport(jobs) {
                   <th style="padding: 10px 14px;">Role & Company</th>
                   <th style="padding: 10px 14px; text-align: center;">Portal</th>
                   <th style="padding: 10px 14px; text-align: center;">Match</th>
-                  <th style="padding: 10px 14px;">Tailored Resume</th>
+                  <th style="padding: 10px 14px;">Resume Used</th>
                   <th style="padding: 10px 14px; text-align: center;">Status</th>
                   <th style="padding: 10px 14px; text-align: center;">Link</th>
                 </tr>
@@ -170,6 +210,7 @@ function buildHtmlReport(jobs) {
       <!-- Footer -->
       <div style="background: #f8fafc; padding: 18px 32px; border-top: 1px solid #e5e7eb; font-size: 12px; color: #64748b; text-align: center;">
         Generated automatically by your <strong>Antigravity Auto-Apply & Tailoring Engine</strong> for Aditya Mittha.
+        <br><span style="color: #9ca3af; font-size: 11px;">📎 Tailored resume PDFs attached to this email.</span>
       </div>
     </div>
   </body>
@@ -208,16 +249,47 @@ async function sendDailyReport() {
     },
   });
 
+  // Collect resume attachments for the applied jobs (up to 5 to avoid attachment size bloat)
+  const attachments = [];
+  const attachedPaths = new Set();
+
+  for (const job of jobs) {
+    if (attachments.length >= 5) break;
+    const rPath = resolveResumePath(job);
+    if (rPath && fs.existsSync(rPath) && !attachedPaths.has(rPath)) {
+      attachedPaths.add(rPath);
+      const cleanCompany = (job.company || 'Role').replace(/[^a-zA-Z0-9]+/g, '_').slice(0, 20);
+      attachments.push({
+        filename: `Resume_${cleanCompany}_${job.category || 'Embedded'}.pdf`,
+        path: rPath,
+        contentType: 'application/pdf',
+      });
+    }
+  }
+
+  // Fallback: Always attach at least the base embedded resume if none attached yet
+  if (attachments.length === 0) {
+    const defaultResume = path.join(RESUME_DIR, 'Mittha_Aditya_Embedded.pdf');
+    if (fs.existsSync(defaultResume)) {
+      attachments.push({
+        filename: 'Mittha_Aditya_Embedded.pdf',
+        path: defaultResume,
+        contentType: 'application/pdf',
+      });
+    }
+  }
+
   const mailOptions = {
     from: `"Antigravity Job Engine" <${SMTP_USER}>`,
     to: RECIPIENT,
     subject: `🎯 Daily Applications Summary: ${jobs.length} Jobs/Internships Applied (${new Date().toLocaleDateString()})`,
     html: htmlContent,
+    attachments,
   };
 
   try {
     const info = await transporter.sendMail(mailOptions);
-    log(`✅ Daily report successfully sent to ${RECIPIENT} (MessageId: ${info.messageId})`);
+    log(`✅ Daily report successfully sent to ${RECIPIENT} with ${attachments.length} resume attachment(s) (MessageId: ${info.messageId})`);
   } catch (err) {
     log(`❌ Failed to send email: ${err.message}`);
     log(`HTML report is preserved at: ${PREVIEW_FILE}`);
@@ -232,4 +304,5 @@ module.exports = {
   sendDailyReport,
   buildHtmlReport,
   getTodayApplications,
+  resolveResumePath,
 };

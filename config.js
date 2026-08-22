@@ -71,12 +71,28 @@ const aiConfig = {
 
 const autoApplyConfig = {
   keywords: g('AUTO_APPLY_KEYWORDS', 'Embedded Systems Intern, Firmware Engineer, Python Developer, IoT Intern, Embedded C').split(',').map(s => s.trim()).filter(Boolean),
-  locations: g('AUTO_APPLY_LOCATIONS', 'Pune, Remote, Solapur, Bangalore, Hyderabad').split(',').map(s => s.trim()).filter(Boolean),
+  locations: g('AUTO_APPLY_LOCATIONS', 'Pune, Remote, Solapur').split(',').map(s => s.trim()).filter(Boolean),
   experience: g('AUTO_APPLY_EXPERIENCE', '0'),
   maxPerRun: parseInt(g('AUTO_APPLY_MAX_PER_RUN', '10'), 10),
   minMatchScore: parseInt(g('AUTO_APPLY_MIN_MATCH_SCORE', '50'), 10),
   dryRun: g('DRY_RUN', 'false').toLowerCase() === 'true',
 };
 
-module.exports = { CV, CREDS, geminiKey, naukriProfileUrl, autoApplyConfig, aiConfig };
+// Allowed locations for filtering — only apply to jobs in these cities or remote
+const ALLOWED_LOCATIONS = g('ALLOWED_LOCATIONS', 'Pune, Remote, Solapur, Work from Home, WFH, Anywhere, Work From Home')
+  .split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
+
+/**
+ * Checks if a job's location string matches any allowed location.
+ * Case-insensitive, partial-match (e.g. "Pune, Maharashtra" matches "pune").
+ * @param {string} locationStr - The job's location text from the portal
+ * @returns {boolean}
+ */
+function isLocationAllowed(locationStr) {
+  if (!locationStr) return false;
+  const loc = locationStr.toLowerCase();
+  return ALLOWED_LOCATIONS.some(allowed => loc.includes(allowed));
+}
+
+module.exports = { CV, CREDS, geminiKey, naukriProfileUrl, autoApplyConfig, aiConfig, isLocationAllowed, ALLOWED_LOCATIONS };
 
