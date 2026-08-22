@@ -114,7 +114,7 @@ function buildHtmlReport(jobs) {
 
     const badgeColor = job.category === 'embedded' ? '#3b82f6' : '#8b5cf6';
     const time = new Date(job.appliedAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
-    const resumeDisplay = job.resumeUsed || 'Mittha_Aditya_Embedded.pdf';
+    const resumeDisplay = job.resumeUsed || (job.category === 'python_devops' ? 'Mittha_Aditya.pdf' : 'Mittha_Aditya_Embedded.pdf');
     const isTailoredBadge = (job.isTailored || (job.tailoredResumePath && job.tailoredResumePath.includes('tailored')))
       ? `<span style="background: #ecfdf5; color: #059669; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 600; margin-left: 4px;">✨ ATS Tailored</span>`
       : '';
@@ -123,9 +123,15 @@ function buildHtmlReport(jobs) {
       ? `<div style="font-size: 11px; color: #2563eb; margin-top: 2px;">✉️ ${job.recruiterEmail}</div>`
       : '';
 
-    const resumeLinkHtml = job.s3Url
-      ? `<a href="${job.s3Url}" target="_blank" style="display: inline-block; background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; padding: 4px 10px; border-radius: 6px; text-decoration: none; font-size: 12px; font-weight: 600;">View Resume ↗</a>`
-      : `<span style="font-size: 12px; color: #6b7280;">📄 ${resumeDisplay}</span>`;
+    // Direct clickable link: S3 pre-signed URL if available, otherwise direct GitHub link
+    const directResumeUrl = job.s3Url || `https://github.com/AdityaMittha/Auto-Apply/blob/main/resume/${encodeURIComponent(resumeDisplay)}`;
+
+    const resumeLinkHtml = `
+      <a href="${directResumeUrl}" target="_blank" style="display: inline-block; background: #2563eb; color: #ffffff; padding: 5px 11px; border-radius: 6px; text-decoration: none; font-size: 12px; font-weight: 600; box-shadow: 0 1px 2px rgba(0,0,0,0.08);">
+        📄 View Resume ↗
+      </a>
+      <div style="font-size: 11px; color: #6b7280; margin-top: 3px;">${resumeDisplay}</div>
+    `;
 
     return `
       <tr style="border-bottom: 1px solid #e5e7eb;">

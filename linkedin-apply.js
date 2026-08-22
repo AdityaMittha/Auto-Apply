@@ -124,11 +124,12 @@ function saveAppliedJobs(data) {
               log(`   Warning: Could not fetch LinkedIn JD page, using card info.`);
             }
 
-            // Analyze with hybrid tailor engine (keyword + AI)
+            // Analyze with hybrid tailor engine (keyword + AI + LaTeX tailoring)
             const analysis = await analyzeJob(job.title, fullJd, [], {
               cv: CV,
               geminiKey,
               aiEnabled: aiConfig.enabled,
+              jobId: job.url || `${job.company}_${job.title}`,
             });
             log(`   Category: [${analysis.category.toUpperCase()}] | Score: ${analysis.matchScore}% | Resume: ${analysis.resumeName} ${analysis.aiEnhanced ? '🤖 AI' : '🔑 Keyword'}`);
             if (analysis.aiEnhanced && analysis.reasoning) {

@@ -127,11 +127,12 @@ const INTERNSHALA_SLUGS = [
             log(`   Warning: Could not fetch Internshala detail page, using card info.`);
           }
 
-          // Evaluate with hybrid tailor engine (keyword + AI)
+          // Evaluate with hybrid tailor engine (keyword + AI + LaTeX tailoring)
           const analysis = await analyzeJob(item.title, fullJd, [], {
             cv: CV,
             geminiKey,
             aiEnabled: aiConfig.enabled,
+            jobId: item.url || `${item.company}_${item.title}`,
           });
           log(`   Category: [${analysis.category.toUpperCase()}] | Score: ${analysis.matchScore}% | Resume: ${analysis.resumeName} ${analysis.aiEnhanced ? '🤖 AI' : '🔑 Keyword'}`);
           if (analysis.aiEnhanced && analysis.reasoning) {

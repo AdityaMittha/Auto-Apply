@@ -104,6 +104,7 @@ function saveAppliedJobs(data) {
             cv: CV,
             geminiKey,
             aiEnabled: aiConfig.enabled,
+            jobId: job.url || `${job.company}_${job.title}`,
           });
           log(`   Category: [${analysis.category.toUpperCase()}] | Score: ${analysis.matchScore}% | Resume: ${analysis.resumeName} ${analysis.aiEnhanced ? '🤖 AI' : '🔑 Keyword'}`);
           if (analysis.aiEnhanced && analysis.reasoning) {

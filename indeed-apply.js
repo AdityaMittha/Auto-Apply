@@ -117,6 +117,7 @@ function saveAppliedJobs(data) {
               cv: CV,
               geminiKey,
               aiEnabled: aiConfig.enabled,
+              jobId: job.url || `${job.company}_${job.title}`,
             });
             log(`-------------------------------------------------------`);
             log(`Evaluating: ${job.title} at ${job.company} (${job.location})`);

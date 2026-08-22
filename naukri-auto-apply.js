@@ -151,11 +151,12 @@ function sleep(ms) {
               log(`Warning: Could not fetch detailed JD page, using card snippet.`);
             }
 
-            // Run Tailoring Engine (hybrid keyword + AI)
+            // Run Tailoring Engine (hybrid keyword + AI + LaTeX tailoring)
             const analysis = await analyzeJob(job.title, fullJd, job.tags, {
               cv: CV,
               geminiKey,
               aiEnabled: aiConfig.enabled,
+              jobId: job.jobId || `${job.company}_${job.title}`,
             });
             log(`   Category: [${analysis.category.toUpperCase()}] | Score: ${analysis.matchScore}% (Min: ${autoApplyConfig.minMatchScore}%) ${analysis.aiEnhanced ? '🤖 AI' : '🔑 Keyword'}`);
             log(`   Matched Keywords: ${analysis.matchedKeywords.slice(0, 6).join(', ')}`);

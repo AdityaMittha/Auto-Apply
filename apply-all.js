@@ -4,7 +4,7 @@
  */
 const { spawn } = require('child_process');
 const path = require('path');
-const { sendDailyReport } = require('./mailer');
+
 
 function runScript(scriptName, args = []) {
   return new Promise((resolve) => {
@@ -50,11 +50,6 @@ function runScript(scriptName, args = []) {
   // 6. Run Foundit Engine
   await runScript('foundit-apply.js', args);
 
-  // 7. Send Consolidated Daily Email Digest
-  console.log(`\n=======================================================`);
-  console.log(`📧 Sending Daily Summary Email Digest to adityamittha09@gmail.com...`);
-  console.log(`=======================================================`);
-  await sendDailyReport();
-
-  console.log(`\n🎉 All 6 portal sweeps & daily email digest completed!`);
+  console.log(`\n🎉 All 6 portal sweeps completed! (Daily email digest is scheduled for 8:00 PM IST via cron)`);
 })();
+
