@@ -13,7 +13,7 @@ daily-report-preview.html
 .*-apply-profile/
 
 # resume / personal docs
-*.pdf
+# (Base PDFs are tracked; tailored PDFs in resume/tailored/ are ignored)
 
 # AWS deployment
 .deploy-info
