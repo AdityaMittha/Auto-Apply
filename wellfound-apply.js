@@ -1,18 +1,22 @@
 /**
- * Wellfound (formerly AngelList) Startup Jobs & Internships Crawler.
+ * Wellfound (AngelList) Application & Resume Tailoring Engine
+ * 
+ * Searches startup engineering roles in Pune/Remote, compiles custom LaTeX resumes,
+ * and handles Wellfound application modals.
  */
+
 const { chromium } = require('playwright-core');
 const path = require('path');
 const fs = require('fs');
-const { CV, autoApplyConfig, geminiKey, aiConfig, isLocationAllowed } = require('./config');
+const { autoApplyConfig, CV, geminiKey, aiConfig, isLocationAllowed } = require('./config');
 const { analyzeJob } = require('./tailor-engine');
+const { generateCoverLetter } = require('./gemini-ai');
 
 const PROFILE_DIR = path.join(__dirname, '.wellfound-chrome-profile');
-const APPLIED_FILE = path.join(__dirname, 'applied-jobs.json');
 const LOG_FILE = path.join(__dirname, 'naukri-applications.log');
-
-const IS_DRY_RUN = process.argv.includes('--dry-run') || process.argv.includes('dry') || autoApplyConfig.dryRun;
-const VISIBLE_MODE = process.argv.includes('visible') || process.argv.includes('--visible');
+const APPLIED_FILE = path.join(__dirname, 'applied-jobs.json');
+const IS_DRY_RUN = process.argv.includes('dry') || process.argv.includes('--dry-run') || autoApplyConfig.dryRun;
+const VISIBLE_MODE = process.argv.includes('visible') || process.argv.includes('--visible') || process.argv.includes('login');
 
 const log = (msg) => {
   const line = `[${new Date().toLocaleString()}] [WELLFOUND] ${msg}`;
@@ -36,17 +40,19 @@ function saveAppliedJobs(data) {
 
 (async () => {
   log(`=======================================================`);
-  log(`🚀 Starting Wellfound / AngelList Engine (Dry Run: ${IS_DRY_RUN ? 'YES' : 'NO'}, Mode: ${VISIBLE_MODE ? 'Visible' : 'Off-screen'})`);
+  log(`🚀 Starting Wellfound (AngelList) Application Engine`);
+  log(`🎯 Target Locations: Pune, Remote, Solapur`);
+  log(`⚙️ Mode: ${IS_DRY_RUN ? '🧪 DRY RUN (Preview only)' : '⚡ LIVE APPLY'}`);
   log(`=======================================================`);
 
-  const appliedDb = loadAppliedJobs();
-  const appliedUrls = new Set(appliedDb.applied.map(a => a.url));
-
   const IS_LINUX = process.platform === 'linux';
+  const appliedDb = loadAppliedJobs();
+  const appliedUrls = new Set(appliedDb.applied.map(a => a.jobId || a.url));
+
   const ctx = await chromium.launchPersistentContext(PROFILE_DIR, {
     channel: IS_LINUX ? 'chromium' : 'chrome',
-    headless: false,
-    viewport: { width: 1280, height: 850 },
+    headless: !VISIBLE_MODE && IS_LINUX,
+    viewport: { width: 1280, height: 900 },
     args: [
       '--disable-blink-features=AutomationControlled',
       ...(IS_LINUX ? ['--no-sandbox', '--disable-gpu', '--disable-dev-shm-usage'] : []),
@@ -58,52 +64,94 @@ function saveAppliedJobs(data) {
   let processedCount = 0;
 
   try {
-    const searchUrl = `https://wellfound.com/jobs?roles[]=Software%20Engineer&roles[]=Hardware%20Engineer&keywords=embedded,iot,python`;
-    log(`🔍 Searching Wellfound: ${searchUrl}`);
-
-    await page.goto(searchUrl, { waitUntil: 'domcontentloaded', timeout: 45000 });
+    const url = 'https://wellfound.com/jobs?role=software-engineer&location=pune';
+    log(`\n🔍 Crawling Wellfound: ${url}`);
+    await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 45000 });
     await page.waitForTimeout(3000);
 
     const jobs = await page.evaluate(() => {
-      const cards = Array.from(document.querySelectorAll('[data-test="StartupResult"], div[class*="styles_result"]'));
+      const cards = Array.from(document.querySelectorAll('div[data-test="JobListing"], div[class*="styles_jobListing"]'));
       return cards.map(c => {
-        const titleEl = c.querySelector('a[data-test="JobTitle"], h2 a, a[class*="jobTitle"]');
-        const compEl = c.querySelector('h2, a[data-test="StartupName"], [class*="startupName"]');
-        const locEl = c.querySelector('[class*="location"], [data-test="JobLocation"]');
-        const link = titleEl ? titleEl.href : '';
+        const titleEl = c.querySelector('a[data-test="job-title"], h2 a, a[class*="title"]');
+        const compEl = c.querySelector('h3, a[class*="companyName"], div[class*="company"]');
+        const locEl = c.querySelector('span[class*="location"], div[class*="location"]');
 
         return {
-          title: titleEl ? titleEl.innerText.trim() : 'Software Engineer',
-          company: compEl ? compEl.innerText.trim() : 'Startup',
-          location: locEl ? locEl.innerText.trim() : 'India / Remote',
-          url: link || 'https://wellfound.com/jobs',
+          title: titleEl ? titleEl.innerText.trim() : '',
+          company: compEl ? compEl.innerText.trim() : '',
+          location: locEl ? locEl.innerText.trim() : 'Pune / Remote',
+          url: titleEl ? titleEl.href : '',
         };
-      }).filter(j => j.title);
+      }).filter(j => j.title && j.url);
     });
 
-    log(`Found ${jobs.length} Wellfound startup opportunities.`);
+    log(`Found ${jobs.length} jobs on Wellfound.`);
 
     for (const job of jobs) {
       if (processedCount >= autoApplyConfig.maxPerRun) break;
       if (appliedUrls.has(job.url)) continue;
 
-      const analysis = await analyzeJob(job.title, `${job.title} ${job.company}`, [], {
+      if (!isLocationAllowed(job.location)) {
+        log(`   ⏭️ Skipped: Location "${job.location}" not allowed.`);
+        continue;
+      }
+
+      const analysis = await analyzeJob(job.title, `${job.title} ${job.company} ${job.location}`, [], {
         cv: CV,
         geminiKey,
         aiEnabled: aiConfig.enabled,
         jobId: job.url || `${job.company}_${job.title}`,
       });
+
       log(`-------------------------------------------------------`);
       log(`Evaluating: ${job.title} at ${job.company} (${job.location})`);
+      log(`   Category: [${analysis.category.toUpperCase()}] | Score: ${analysis.matchScore}% | Resume: ${analysis.resumeName}`);
 
-      // Location filter — skip jobs not in Pune/Remote/Solapur
-      if (!isLocationAllowed(job.location)) {
-        log(`   ⏭️ Skipped: Location "${job.location}" not in allowed list (Pune/Remote/Solapur).`);
+      if (analysis.matchScore < autoApplyConfig.minMatchScore) {
+        log(`   ⏭️ Skipped: Match score below threshold.`);
         continue;
       }
-      log(`   Category: [${analysis.category.toUpperCase()}] | Score: ${analysis.matchScore}% | Resume: ${analysis.resumeName} ${analysis.aiEnhanced ? '🤖 AI' : '🔑 Keyword'}`);
-      if (analysis.aiEnhanced && analysis.reasoning) {
-        log(`   💡 ${analysis.reasoning}`);
+
+      let applyStatus = 'EXTERNAL_REDIRECT';
+
+      if (!IS_DRY_RUN) {
+        let jobPage = null;
+        try {
+          jobPage = await ctx.newPage();
+          await jobPage.goto(job.url, { waitUntil: 'domcontentloaded', timeout: 35000 });
+          await jobPage.waitForTimeout(2500);
+
+          const applyBtn = jobPage.locator('button:has-text("Apply"), button[data-test="apply-button"]').first();
+          if (await applyBtn.isVisible().catch(() => false)) {
+            await applyBtn.click();
+            await jobPage.waitForTimeout(2000);
+
+            // Fill cover note if note textarea appears
+            const noteArea = jobPage.locator('textarea[name="note"], textarea[placeholder*="note"]').first();
+            if (await noteArea.isVisible().catch(() => false)) {
+              const noteText = await generateCoverLetter({
+                title: job.title,
+                company: job.company,
+                jdText: `${job.title} ${job.company}`,
+                category: analysis.category,
+                cv: CV,
+                apiKey: geminiKey,
+              }) || `I am an E&TC student at Walchand Institute of Technology (9.27 CGPA) with strong practical experience in Embedded C, FreeRTOS, and Python. Available immediately in Pune / Remote.`;
+              await noteArea.fill(noteText);
+            }
+
+            const sendBtn = jobPage.locator('button:has-text("Send application")').first();
+            if (await sendBtn.isVisible().catch(() => false)) {
+              await sendBtn.click();
+              await jobPage.waitForTimeout(3000);
+              applyStatus = 'APPLIED';
+              log(`   🎉 Applied on Wellfound!`);
+            }
+          }
+        } catch {}
+        if (jobPage) await jobPage.close().catch(() => {});
+      } else {
+        applyStatus = 'PREVIEW_DRY_RUN';
       }
 
       appliedDb.applied.push({
@@ -114,17 +162,13 @@ function saveAppliedJobs(data) {
         url: job.url,
         category: analysis.category,
         resumeUsed: analysis.resumeName,
-        tailoredResumePath: analysis.tailoredResumePath || analysis.selectedResume,
-        s3Url: analysis.s3Url || null,
-        s3Key: analysis.s3Key || null,
-        isTailored: analysis.isTailored || false,
+        tailoredResumePath: analysis.tailoredResumePath,
+        s3Url: analysis.s3Url,
+        s3Key: analysis.s3Key,
+        isTailored: analysis.isTailored,
         matchScore: analysis.matchScore,
-        matchedSkills: analysis.matchedSkills || [],
-        missingSkills: analysis.missingSkills || [],
-        aiReasoning: analysis.reasoning || '',
-        aiEnhanced: analysis.aiEnhanced || false,
         appliedAt: new Date().toISOString(),
-        status: IS_DRY_RUN ? 'PREVIEW_DRY_RUN' : 'APPLIED',
+        status: applyStatus,
       });
 
       appliedUrls.add(job.url);

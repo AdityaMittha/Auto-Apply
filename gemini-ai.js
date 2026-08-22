@@ -246,8 +246,6 @@ Answer directly — no explanations, no quotes around the answer, no preamble.`;
  * @returns {Promise<{ summary: string, highlightedSkills: string[], projectFocus: string }|null>}
  */
 async function tailorFullResume({ title = '', jdText = '', currentSummary = '', category = 'embedded', cv = {}, apiKey = '' }) {
-  if (!apiKey) return null;
-
   const cvContext = formatCVContext(cv);
   const truncatedJD = jdText.length > 2000 ? jdText.substring(0, 2000) + '...' : jdText;
 
@@ -287,22 +285,87 @@ Respond ONLY with valid JSON (no markdown, no code fences):
       maxTokens: 2048,
       temperature: 0.2,
     });
-    if (!raw) return null;
+    if (raw) {
+      const cleaned = raw.replace(/```json\s*/gi, '').replace(/```\s*/gi, '').trim();
+      const result = JSON.parse(cleaned);
 
-    const cleaned = raw.replace(/```json\s*/gi, '').replace(/```\s*/gi, '').trim();
-    const result = JSON.parse(cleaned);
-
-    if (result && result.summary && result.summary.length > 40) {
-      return {
-        summary: result.summary.trim(),
-        highlightedSkills: Array.isArray(result.highlightedSkills) ? result.highlightedSkills : [],
-        projectFocus: result.projectFocus || 'Codec Technologies',
-      };
+      if (result && result.summary && result.summary.length > 40) {
+        return {
+          summary: result.summary.trim(),
+          highlightedSkills: Array.isArray(result.highlightedSkills) ? result.highlightedSkills : [],
+          projectFocus: result.projectFocus || 'Codec Technologies',
+        };
+      }
     }
-    return null;
-  } catch {
-    return null;
+  } catch {}
+
+  // High-Quality Local Synthesis Fallback (guarantees tailored ATS resume even if API quota is 429)
+  return synthesizeLocalTailoredResume({ title, jdText, category, cv });
+}
+
+/**
+ * Deterministic, metric-driven local resume synthesizer
+ */
+function synthesizeLocalTailoredResume({ title = '', jdText = '', category = 'embedded', cv = {} }) {
+  const jdLower = jdText.toLowerCase();
+  const allSkills = category === 'embedded'
+    ? ['Embedded C', 'FreeRTOS', 'ESP32', 'ARM Cortex-M', 'UART', 'I2C', 'SPI', 'CAN Protocol', 'MQTT', 'Linux', 'Git']
+    : ['Python', 'AWS (Lambda/DynamoDB)', 'Docker', 'REST APIs', 'CI/CD Pipelines', 'Linux', 'Git', 'Data Structures'];
+
+  const matched = allSkills.filter(s => jdLower.includes(s.toLowerCase().split(' ')[0]));
+  const finalSkills = matched.length >= 3 ? matched : allSkills.slice(0, 6);
+
+  let summary = '';
+  if (category === 'embedded') {
+    summary = `Final-year Electronics and Telecommunication Engineering student at Walchand Institute of Technology (9.27 CGPA) with hands-on firmware development experience in ${finalSkills.slice(0, 4).join(', ')}. Engineered real-time sensor communication protocols and low-level firmware during an embedded internship at Codec Technologies India and IoT projects (AQUANOVA, SORTIFY). Seeking the ${title || 'Embedded Firmware Intern'} role to build robust embedded systems.`;
+  } else {
+    summary = `Final-year Engineering student at Walchand Institute of Technology (9.27 CGPA) with hands-on proficiency in ${finalSkills.slice(0, 4).join(', ')}. Built distributed cloud telemetry agents and serverless pipelines (LabPulse) with automated Docker CI/CD workflows. Seeking the ${title || 'Python Developer'} role to engineer scalable backend and cloud solutions.`;
   }
+
+  return {
+    summary,
+    highlightedSkills: finalSkills,
+    projectFocus: category === 'embedded' ? 'Codec Technologies' : 'LabPulse',
+  };
+}
+
+/**
+ * Generates a tailored, punchy 3-4 sentence cover letter / application pitch
+ * with zero AI footprints, customized to the JD.
+ */
+async function generateCoverLetter({ title = '', company = '', jdText = '', category = 'embedded', cv = {}, apiKey = '' }) {
+  const cvContext = formatCVContext(cv);
+  const prompt = `You are Aditya Mittha, a final-year Electronics & Telecommunication Engineering student at Walchand Institute of Technology (9.27 CGPA).
+Write a direct, punchy 3-4 sentence cover letter / application pitch for:
+Role: "${title}"
+Company: "${company}"
+
+CANDIDATE BACKGROUND:
+${cvContext}
+
+JOB DESCRIPTION:
+${jdText.slice(0, 1800)}
+
+STRICT RULES (Zero AI Footprints):
+1. NEVER use AI buzzwords or cliché filler ("spearheaded", "testament", "delve", "tapestry", "foster", "synergy", "cutting-edge", "passionate", "thrilled", "esteemed", "proven track record").
+2. Sound like a sharp, practical engineering student writing directly to a hiring manager.
+3. Mention your 9.27 CGPA at Walchand, practical experience in ${category === 'embedded' ? 'FreeRTOS, Embedded C, ESP32, and hardware telemetry' : 'Python, AWS, and backend systems'}, and immediate availability in Pune / Remote.
+4. Output ONLY the 3-4 sentence letter text. No greetings like "Dear Hiring Manager", no sign-offs, no placeholders.`;
+
+  if (apiKey) {
+    try {
+      const raw = await callGemini(prompt, apiKey, {
+        maxTokens: 1024,
+        temperature: 0.25,
+      });
+      if (raw && raw.length > 50) {
+        return raw.replace(/^["']|["']$/g, '').trim();
+      }
+    } catch {}
+  }
+
+  // Local fallback
+  return `I am a final-year Electronics and Telecommunication Engineering student at Walchand Institute of Technology (9.27 CGPA) with hands-on experience in ${category === 'embedded' ? 'Embedded C, FreeRTOS, ESP32 microcontrollers, and UART/I2C protocols' : 'Python, AWS Serverless architecture, and Docker'}. I have developed production-grade projects including ${category === 'embedded' ? 'AQUANOVA and MCU firmware at Codec Technologies' : 'LabPulse telemetry pipeline'} and am seeking the ${title || 'Engineering Intern'} opportunity at ${company || 'your team'}. I am available immediately for full-time work in Pune / Remote.`;
 }
 
 /**
@@ -319,6 +382,8 @@ module.exports = {
   answerScreeningQuestion,
   tailorResumeSummary,
   tailorFullResume,
+  generateCoverLetter,
   formatCVContext,
 };
+
 
