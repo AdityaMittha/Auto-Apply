@@ -1,164 +1,228 @@
-# Naukri Profile Refresh
+# 🚀 Auto-Apply & Resume Tailoring Engine
 
-Keeps your Naukri profile "recently updated" — recruiters see fresh profiles first.
-Every run it toggles a trailing `.` on your **resume headline**, which counts as a
-profile update on Naukri. Schedule it hourly and forget about it.
+An autonomous, multi-portal job search, dynamic LaTeX resume tailoring, and application tracking system built for **Aditya Mittha** (Final-Year B.Tech E&TC, Walchand Institute of Technology — 9.27 CGPA).
 
-- Logs in automatically with your **Google account** (session is saved after the first login).
-- Runs in an off-screen Chrome window (Naukri blocks headless browsers).
-- Verifies the save actually stuck on the server before reporting success.
-- All personal data lives in `.env` — nothing sensitive is in the code.
+The bot runs 24/7 in the cloud on AWS EC2, continuously monitoring 6 major job portals, tailoring ATS-optimized resumes with zero AI footprints, checking recruiter application status, sending cold outreach emails, and dispatching a consolidated daily digest at 8:00 PM IST.
 
-## Requirements
+---
 
-- Windows 10/11 (uses Task Scheduler for the hourly run)
-- [Node.js](https://nodejs.org/) 18+
-- Google Chrome installed
-- A Naukri account that signs in with Google
+## 🌟 Key Features
 
-## Setup
+### 1. 🗺️ Multi-Portal Auto-Apply (6 Platforms)
+Crawls and applies to jobs and internships matching your profile across:
+- **Naukri.com** — Easy Apply & recruiter search
+- **Internshala** — Student internship applications
+- **LinkedIn** — Easy Apply search & detail crawler
+- **Indeed India** — Tech listings with automated screening answers
+- **Wellfound (AngelList)** — Early-stage tech & hardware startup roles
+- **Foundit (Monster India)** — Engineering & developer listings
 
-**1. Clone and install:**
+### 2. 📍 Strict Location Filter
+- Enforces applications **ONLY** in **Pune**, **Remote / Work from Home**, and **Solapur**.
+- Automatically skips jobs in other cities before loading full detail pages to conserve bandwidth and system memory.
 
-```powershell
-git clone https://github.com/ankitbaghel01/naukri_update.git
-cd naukri_update
-npm install
-```
+### 3. 📄 Dynamic LaTeX Resume Compiler (`resume-compiler.js`)
+- Compiles custom, ATS-optimized PDF resumes on-the-fly for **every single application** using `pdflatex` (TeX Live).
+- **Anti-AI Humanized Style**: Uses `gemini-3.6-flash` with strict anti-AI guardrails (banning corporate buzzwords like *spearheaded*, *testament*, *delve*, *tapestry*, *synergy*) to craft 100% authentic, metric-driven summaries and skills highlighting your real achievements (9.27 CGPA, ESP32, FreeRTOS, Embedded C, Python, AWS, UART/I2C/CAN).
+- Tailors:
+  - **Summary**: Direct 2–3 sentence technical pitch tailored to the target JD.
+  - **Skills**: Dynamically re-orders and includes exact matching JD keywords.
+  - **Projects**: Highlights relevant achievements (Codec Technologies internship, LabPulse, AQUANOVA, SORTIFY).
 
-**2. Create your `.env`:**
+### 4. ☁️ Amazon S3 Storage Integration (`s3-storage.js`)
+- Automatically uploads tailored resumes and `applied-jobs.json` backups to Amazon S3 (`auto-apply-aditya-mittha`).
+- Generates secure, 7-day pre-signed download URLs for one-click access.
 
-```powershell
-copy .env.example .env
-```
+### 5. 🔍 Application Status Tracker (`status-tracker.js`)
+- Periodically revisits application boards on Naukri, Internshala, and LinkedIn.
+- Scrapes live application status (*Applied*, *Viewed by Recruiter*, *Recruiter Action*, *Shortlisted*) and extracts recruiter names/emails.
 
-Open `.env` and fill in at least:
+### 6. ✉️ Automated Recruiter Cold Outreach (`cold-mailer.js`)
+- Identifies newly discovered recruiter emails and generates concise (3–4 sentence) formal cold outreach emails.
+- Attaches the tailored resume PDF for that specific role.
+- Equipped with anti-spam safeguards (max 10 cold emails/day).
 
-| Variable | What it is |
-|---|---|
-| `GOOGLE_EMAIL` | The Google account your Naukri profile uses |
-| `GOOGLE_PASSWORD` | Its password (used only for the automated sign-in) |
-| `NAUKRI_PROFILE_URL` | Your Naukri profile page — the default `https://www.naukri.com/mnjuser/profile` works for every account |
+### 7. 📧 Daily 8:00 PM IST Email Digest (`mailer.js`)
+- Sends a clean, beautiful HTML digest every day at **8:00 PM IST** to `adityamittha09@gmail.com`.
+- Contains live stats, match percentages, category breakdowns, and direct clickable `[View Resume ↗]` links (no heavy attachments).
 
-`.env` is git-ignored, so your credentials never get pushed.
+### 8. 🔄 Naukri Profile Refresh (`naukri-profile-refresh.js`)
+- Runs hourly to toggle a trailing dot on your Naukri headline, keeping your profile at the top of recruiter search results 24/7.
 
-**3. First login (one time, visible browser):**
+---
 
-```powershell
-node naukri-profile-refresh.js login
-```
-
-A Chrome window opens and signs in with Google. If Google asks for 2-step
-verification, approve it once — the session is saved to `.naukri-chrome-profile/`
-and reused by every later run.
-
-**4. Test a silent run:**
-
-```powershell
-node naukri-profile-refresh.js
-```
-
-Check `naukri-refresh.log` — you should see a line like:
+## 🏗️ Architecture & Cron Schedule
 
 ```
-[27/7/2026, 1:05:12 pm] OK: headline dot added (verified) → "AI Full Stack Developer | ..."
+                    ┌─────────────────────────┐
+                    │      AWS EC2 Server     │
+                    │  (Amazon Linux 2023)    │
+                    └────────────┬────────────┘
+                                 │
+   ┌─────────────────────────────┼─────────────────────────────┐
+   │ (Every Hour)                │ (Every 10 Mins)             │ (Daily 6:00 PM IST)
+   ▼                             ▼                             ▼
+Profile Refresh             Apply-All (6 Portals)         Status Tracker
+(Keep Naukri Active)        - Location Filter             (Scrapes Viewed / Shortlisted)
+                            - Gemini 3.6 Flash Tailor     (Extracts Recruiter Emails)
+                            - pdflatex Compile to PDF
+                            - Amazon S3 Backup
+                                 │                             │
+                                 │ (Daily 7:30 PM IST)         ▼ (Daily 6:30 PM IST)
+                                 │ S3 Resume Sync              Cold Outreach Mailer
+                                 │                             (Tailored Recruiter Email)
+                                 ▼
+                    ┌─────────────────────────┐
+                    │   8:00 PM IST Digest    │
+                    │   HTML Summary Email    │
+                    │ (Clickable S3 PDF Links)│
+                    └─────────────────────────┘
 ```
 
-## Run it hourly (Task Scheduler)
+### Automated EC2 Cron Schedule (IST = UTC + 5:30)
 
-Run this once in PowerShell (adjust the path to where you cloned the repo):
+| Time (IST) | Cron Expression | Script / Task | Description |
+|---|---|---|---|
+| **Every hour** | `0 * * * *` | `./run.sh refresh` | Toggles headline dot to keep Naukri profile fresh |
+| **Every 10 min** | `*/10 * * * *` | `./run.sh apply:all` | Crawls & applies across all 6 portals (Pune/Remote only) |
+| **6:00 PM** | `30 12 * * *` | `./run.sh status:check` | Scrapes application tracker status across portals |
+| **6:30 PM** | `00 13 * * *` | `./run.sh cold:mail` | Sends personalized cold emails to discovered recruiters |
+| **7:30 PM** | `00 14 * * *` | `./run.sh s3:sync` | Syncs tailored resumes and database to S3 |
+| **8:00 PM** | `30 14 * * *` | `./run.sh mail:report` | Dispatches daily consolidated HTML summary email |
 
-```powershell
-$repo = "C:\path\to\auto-apply"
-$action  = New-ScheduledTaskAction -Execute "node.exe" -Argument "`"$repo\naukri-profile-refresh.js`"" -WorkingDirectory $repo
-$trigger = New-ScheduledTaskTrigger -Once -At (Get-Date) -RepetitionInterval (New-TimeSpan -Hours 1)
-Register-ScheduledTask -TaskName "NaukriProfileRefresh" -Action $action -Trigger $trigger -Settings (New-ScheduledTaskSettingsSet -StartWhenAvailable)
+---
+
+## 🛠️ CLI Commands & Usage
+
+### 🚀 Application Commands
+```bash
+# Run all 6 portals in live mode
+npm run apply:all
+
+# Run all 6 portals in dry-run mode (safe preview)
+npm run apply:all:dry
+
+# Run individual portals
+npm run apply:naukri
+npm run apply:internshala
+npm run apply:linkedin
+npm run apply:indeed
+npm run apply:wellfound
+npm run apply:foundit
+
+# View application history table in terminal
+npm run apply:history
 ```
 
-That's it — the script now refreshes your profile every hour while your PC is on.
+### 📧 Mailer & Outreach Commands
+```bash
+# Preview the daily HTML email report in your browser
+npm run mail:preview
 
-Useful commands:
+# Send daily email digest immediately
+npm run mail:report
 
-```powershell
-Get-ScheduledTask NaukriProfileRefresh            # check status
-Start-ScheduledTask NaukriProfileRefresh          # run now
-Disable-ScheduledTask NaukriProfileRefresh        # pause
-Enable-ScheduledTask NaukriProfileRefresh         # resume
-Unregister-ScheduledTask NaukriProfileRefresh     # remove
+# Check application status across portals
+npm run status:check
+
+# Run recruiter cold outreach (dry run)
+npm run cold:mail:dry
+
+# Run recruiter cold outreach (live)
+npm run cold:mail
+
+# Sync tailored resumes and data to S3
+npm run s3:sync
 ```
 
-## Troubleshooting
+---
 
-| Symptom | Fix |
-|---|---|
-| `Google login did not complete` in the log | Run `node naukri-profile-refresh.js login` and approve the 2-step verification prompt once manually. |
-| `save did not stick` in the log | Naukri changed its headline editor — open an issue. |
-| Any other error | Check `naukri-refresh-error-*.png` screenshots in the repo folder — they show exactly what the browser saw when it failed. |
-| Want to start fresh | Delete the `.naukri-chrome-profile/` folder and run the `login` step again. |
+## ⚙️ Configuration (`.env`)
 
-## Files
-
-| File | Purpose |
-|---|---|
-| `naukri-profile-refresh.js` | The refresh script |
-| `config.js` | Loads `.env` (no dependencies) |
-| `.env.example` | Template — copy to `.env` and fill in |
-| `naukri-refresh.log` | Run history (git-ignored) |
-| `.naukri-chrome-profile/` | Saved Chrome session (git-ignored) |
-
-## Auto-Apply Engine (6 Portals: Naukri, Internshala, LinkedIn, Indeed, Wellfound, Foundit)
-
-Automatically searches for jobs and internships matching your profile across 6 top platforms, extracts Job Descriptions, calculates match scores, selects your tailored resume PDF, and applies automatically.
-
-### Commands:
-
-| Command | Action |
-|---|---|
-| `npm run apply:all:dry` | **All Portals Dry Run** — crawls & scores across all 6 portals without submitting |
-| `npm run apply:all` | **All Portals Live** — applies across all 6 portals & dispatches the daily email report |
-| `npm run apply:naukri` | **Naukri Only** — crawl & apply on Naukri.com |
-| `npm run apply:internshala` | **Internshala Only** — crawl & apply on Internshala internships |
-| `npm run apply:linkedin` | **LinkedIn Only** — crawl Easy Apply roles on LinkedIn |
-| `npm run apply:indeed` | **Indeed Only** — crawl & match Indeed India jobs |
-| `npm run apply:wellfound` | **Wellfound Only** — crawl startup engineering jobs & internships |
-| `npm run apply:foundit` | **Foundit Only** — crawl tech openings on Foundit (Monster) |
-| `npm run apply:history` | **View Applied Jobs Table** — prints unified terminal table of all applied jobs |
-
-### End-of-Day Email Digest (`mailer.js`)
-
-At the end of every day (8:00 PM), a scheduled Windows task compiles all applications submitted across all portals and sends an HTML digest to `adityamittha09@gmail.com`.
-
-| Command | Action |
-|---|---|
-| `npm run mail:preview` | **Preview Report Locally** — generates `daily-report-preview.html` to view in your browser |
-| `npm run mail:report` | **Send Report Now** — emails the daily digest to your inbox |
-| `npm run task:mail:status` | **Check Mailer Task** — checks the scheduled daily 8:00 PM mailer task state |
-
-### Configuration (`.env`):
+Copy `.env.example` to `.env` and configure your credentials:
 
 ```env
-# Email Digest Configuration
+# Google Account (Used for Naukri automated login)
+GOOGLE_EMAIL=adityamittha09@gmail.com
+GOOGLE_PASSWORD=your-password
+NAUKRI_PROFILE_URL=https://www.naukri.com/mnjuser/profile
+
+# Candidate Profile
+NAME=Aditya Mittha
+EMAIL=adityamittha09@gmail.com
+PHONE=+91 8010542551
+LOCATION=Solapur, India
+EDUCATION=Bachelor's Degree in Electronics and Telecommunication, Walchand Institute Of Technology (2023-2027)
+SKILLS=Embedded C, Python, FreeRTOS, ARM Cortex-M, ESP32, Raspberry Pi, UART, SPI, I2C, CAN, MQTT, AWS, Docker, Linux, Git
+
+# Gemini AI (Resume Tailoring & Screening Answers)
+GEMINI_KEY=your-gemini-api-key
+GEMINI_MODEL=gemini-3.6-flash
+AI_ENABLED=true
+
+# Email Digest & Cold Outreach Settings
 REPORT_EMAIL_TO=adityamittha09@gmail.com
 SMTP_USER=adityamittha09@gmail.com
 SMTP_PASS=your-gmail-app-password
+COLD_EMAIL_ENABLED=true
+COLD_EMAIL_MAX_PER_DAY=10
 
-# Auto-Apply Keywords & Locations
+# Search & Location Filters
 AUTO_APPLY_KEYWORDS=Embedded Systems Intern, Firmware Engineer, Python Developer, IoT Intern, Embedded C
-AUTO_APPLY_LOCATIONS=Pune, Remote, Solapur, Bangalore, Hyderabad
+AUTO_APPLY_LOCATIONS=Pune, Remote, Solapur
+ALLOWED_LOCATIONS=Pune, Remote, Solapur, Work from Home, WFH, Anywhere
 AUTO_APPLY_EXPERIENCE=0
-AUTO_APPLY_MIN_MATCH_SCORE=50
 AUTO_APPLY_MAX_PER_RUN=10
+AUTO_APPLY_MIN_MATCH_SCORE=50
 DRY_RUN=false
+
+# Amazon S3 Storage
+S3_BUCKET_NAME=auto-apply-aditya-mittha
+AWS_REGION=ap-south-1
 ```
 
-### Resume Tailoring Logic:
-- **Embedded / Firmware Roles** → Automatically attaches `resume/Mittha_Aditya_Embedded.pdf` (ARM Cortex-M, ESP32, FreeRTOS, Embedded C, UART/SPI/I2C/CAN/MQTT, AQUANOVA, SORTIFY).
-- **Python / Cloud / DevOps Roles** → Automatically attaches `resume/Mittha_Aditya.pdf` (Python, AWS Lambda/DynamoDB, Docker, CI/CD, LabPulse).
-- **Recruiter Screening Questions** → Automatically answered using your credentials and project achievements.
-- **Application History** → Stored in `applied-jobs.json` to prevent applying twice to the same posting.
+---
 
-## Disclaimer
+## 📂 Project Structure
 
-Automating your own profile and applications may be subject to platform guidelines. The engine uses human-like randomized delays and daily application caps, but use responsibly.
+```
+├── .env.example             # Environment variable template
+├── apply-all.js             # Master runner for all 6 portals
+├── config.js                # Central configuration & location filter helper
+├── cron-setup.sh            # Automated crontab installer for EC2
+├── deploy-aws.sh            # Infrastructure provisioning script
+├── deploy-s3.sh             # Amazon S3 bucket setup script
+├── health-check.sh          # System health and process monitor
+├── mailer.js                # HTML email digest builder & sender
+├── naukri-profile-refresh.js# Hourly Naukri bump script
+├── resume-compiler.js       # Dynamic LaTeX compiler & S3 uploader
+├── s3-storage.js            # Amazon S3 storage & presigned URL helper
+├── status-tracker.js        # Portal application status scraper
+├── tailor-engine.js         # Hybrid keyword + AI scoring engine
+├── gemini-ai.js             # Anti-AI humanized prompt engine (Gemini 3.6 Flash)
+├── cold-mailer.js           # Automated recruiter cold emailer
+├── run.sh                   # Headless Xvfb execution wrapper
+├── package.json             # NPM scripts & dependencies
+├── resume/
+│   ├── Aditya_Mittha_Embedded.tex  # Base LaTeX template (Embedded Systems)
+│   ├── Aditya_Mittha.tex           # Base LaTeX template (Python / DevOps)
+│   ├── Mittha_Aditya_Embedded.pdf  # Static PDF fallback
+│   ├── Mittha_Aditya.pdf           # Static PDF fallback
+│   └── tailored/                   # Dynamically compiled per-job PDFs
+└── applied-jobs.json        # Database of submitted applications & statuses
+```
 
+---
 
+## 🛡️ Best Practices & Anti-Bot Protection
+
+- **Randomized Delays**: Human-like randomized pacing (6–12s) between applications to prevent portal rate-limiting.
+- **Headless Xvfb**: Real Chromium browser instances run inside a virtual frame buffer (`:99`) to bypass headless browser detection.
+- **Deduplication**: Every application is indexed by URL/Job ID in `applied-jobs.json` to prevent applying twice to the same job.
+- **Rate-Limited Cold Outreach**: Strict 10-email/day cap with anti-spam delays to protect your sender domain reputation.
+
+---
+
+## 📄 License
+
+ISC © Aditya Mittha
