@@ -148,11 +148,12 @@ async function tailorAndCompileResume({
   let tailoredSummary = originalSummary;
   let highlightedSkills = [];
   let isTailored = false;
+  let aiResult = null;
 
   // Full AI Tailoring with Anti-AI Footprint Guardrails
-  if (aiConfig.enabled && apiKey && jdText && jdText.length > 20) {
+  if (aiConfig.enabled && jdText && jdText.length > 20) {
     try {
-      const aiResult = await tailorFullResume({
+      aiResult = await tailorFullResume({
         title: jobTitle,
         jdText,
         currentSummary: originalSummary,
@@ -198,6 +199,24 @@ async function tailorAndCompileResume({
       updatedTex = updatedTex.replace(
         /(\\item\s*\\textbf\{(?:Core Skills|Programming Languages|Skills)\:\}\s*)([^\n]+)/i,
         `$1${skillsStr}, $2`
+      );
+    }
+
+    // 3. Replace Work Experience bullets if provided
+    if (aiResult && Array.isArray(aiResult.experienceBullets) && aiResult.experienceBullets.length >= 2) {
+      const expItems = aiResult.experienceBullets.map(b => `  \\resumeItem{${escapeLatex(b)}}`).join('\n');
+      updatedTex = updatedTex.replace(
+        /(\\section\{Work Experience\}[\s\S]*?\\resumeItemListStart)([\s\S]*?)(\\resumeItemListEnd)/i,
+        `$1\n${expItems}\n$3`
+      );
+    }
+
+    // 4. Replace Project bullets if provided
+    if (aiResult && Array.isArray(aiResult.projectBullets) && aiResult.projectBullets.length >= 2) {
+      const projItems = aiResult.projectBullets.map(b => `  \\resumeItem{${escapeLatex(b)}}`).join('\n');
+      updatedTex = updatedTex.replace(
+        /(\\section\{Projects\}[\s\S]*?\\resumeItemListStart)([\s\S]*?)(\\resumeItemListEnd)/i,
+        `$1\n${projItems}\n$3`
       );
     }
 

@@ -250,16 +250,16 @@ async function tailorFullResume({ title = '', jdText = '', currentSummary = '', 
   const truncatedJD = jdText.length > 2000 ? jdText.substring(0, 2000) + '...' : jdText;
 
   const prompt = `You are an expert resume writer tailoring a resume for an Indian electronics and software engineering student.
-Your goal is to tailor the candidate's Summary and Skills to achieve a 95%+ ATS keyword match for the target job while sounding 100% human, authentic, and technically grounded.
+Your goal is to tailor the candidate's Summary, Skills, Internship Experience bullets, and Projects to achieve a 98%+ ATS keyword match for the target job while sounding 100% human, authentic, and technically grounded.
 
 CANDIDATE FACTUAL BACKGROUND (DO NOT INVENT FAKE DATA):
 Name: Aditya Mittha | Location: Solapur / Pune, India
 Education: B.Tech in Electronics & Telecommunication, Walchand Institute Of Technology (CGPA: 9.27, Graduating 2027)
-Internship: Embedded Systems Intern at Codec Technologies India (UART, I2C, Embedded C on MCUs)
+Internship: Embedded Systems Intern at Codec Technologies India (Remote, May-June 2025: UART, I2C, Embedded C on MCUs, 10+ hardware defects resolved, Git)
 Key Projects:
 - LabPulse: Python background telemetry agent, AWS Serverless (Lambda, DynamoDB, API Gateway), Docker CI/CD
-- AQUANOVA: ESP32 smart water pressure monitor, MQTT QoS 1 telemetry, ML anomaly detection
-- SORTIFY: Raspberry Pi automated sorting system, Computer Vision, IoT dashboard
+- AQUANOVA: ESP32 smart water pressure monitor, MQTT QoS 1 telemetry, ML anomaly detection, ADC/GPIO sensors
+- SORTIFY: Raspberry Pi automated sorting system, Computer Vision, IoT dashboard, C & Python
 Core Skills: ${cv.skills || 'Embedded C, Python, FreeRTOS, ESP32, ARM Cortex-M, UART, I2C, SPI, CAN, MQTT, AWS, Docker, Linux, Git'}
 
 TARGET JOB TITLE: ${title}
@@ -270,14 +270,21 @@ STRICT WRITING RULES TO AVOID AI FOOTPRINTS:
 1. NEVER use AI buzzwords or cliché corporate filler:
    BANNED WORDS: "spearheaded", "testament", "delve", "tapestry", "foster", "synergy", "cutting-edge", "multifaceted", "holistic", "dynamic landscape", "passionate", "thrilled", "esteemed", "proven track record", "demonstrated aptitude", "harnessing", "unwavering".
 2. Use active, direct engineer phrasing: "Built", "Engineered", "Implemented", "Configured", "Debugged", "Integrated", "Developed".
-3. Summary must be strictly 2 to 3 sentences long. Mention 9.27 CGPA, Walchand, and exact technical tools required by the JD.
-4. Highlighted skills must only include technologies the candidate actually knows that match the JD.
+3. Ground all bullet points in real metrics and tools.
 
 Respond ONLY with valid JSON (no markdown, no code fences):
 {
   "summary": "<2-3 sentence punchy humanized summary tailored to the JD>",
   "highlightedSkills": ["skill1", "skill2", "skill3", "skill4", "skill5", "skill6"],
-  "projectFocus": "<LabPulse|AQUANOVA|Codec Technologies|SORTIFY>"
+  "experienceBullets": [
+    "<Bullet 1 highlighting low-level drivers / protocols / tools matching JD at Codec Technologies>",
+    "<Bullet 2 highlighting testing / debugging / defect resolution with real metrics>",
+    "<Bullet 3 highlighting Git / workflows / embedded documentation>"
+  ],
+  "projectBullets": [
+    "<Bullet 1 highlighting firmware / system engineering matching JD>",
+    "<Bullet 2 highlighting data telemetry / cloud / analytics pipeline matching JD>"
+  ]
 }`;
 
   try {
@@ -293,7 +300,9 @@ Respond ONLY with valid JSON (no markdown, no code fences):
         return {
           summary: result.summary.trim(),
           highlightedSkills: Array.isArray(result.highlightedSkills) ? result.highlightedSkills : [],
-          projectFocus: result.projectFocus || 'Codec Technologies',
+          experienceBullets: Array.isArray(result.experienceBullets) ? result.experienceBullets : [],
+          projectBullets: Array.isArray(result.projectBullets) ? result.projectBullets : [],
+          projectFocus: category === 'embedded' ? 'AQUANOVA' : 'LabPulse',
         };
       }
     }
@@ -304,7 +313,7 @@ Respond ONLY with valid JSON (no markdown, no code fences):
 }
 
 /**
- * Deterministic, metric-driven local resume synthesizer
+ * Deterministic, metric-driven local multi-section resume synthesizer
  */
 function synthesizeLocalTailoredResume({ title = '', jdText = '', category = 'embedded', cv = {} }) {
   const jdLower = jdText.toLowerCase();
@@ -316,16 +325,43 @@ function synthesizeLocalTailoredResume({ title = '', jdText = '', category = 'em
   const finalSkills = matched.length >= 3 ? matched : allSkills.slice(0, 6);
 
   let summary = '';
+  let experienceBullets = [];
+  let projectBullets = [];
+
   if (category === 'embedded') {
     summary = `Final-year Electronics and Telecommunication Engineering student at Walchand Institute of Technology (9.27 CGPA) with hands-on firmware development experience in ${finalSkills.slice(0, 4).join(', ')}. Engineered real-time sensor communication protocols and low-level firmware during an embedded internship at Codec Technologies India and IoT projects (AQUANOVA, SORTIFY). Seeking the ${title || 'Embedded Firmware Intern'} role to build robust embedded systems.`;
+
+    experienceBullets = [
+      `Configured and tested ${finalSkills.includes('CAN Protocol') ? 'CAN and UART' : 'UART and I2C'} communication interfaces on microcontrollers, writing Embedded C code to establish reliable data transmission between peripheral modules.`,
+      `Identified and resolved 10+ hardware interfacing and timing defects across two embedded sensor modules before production qualification.`,
+      `Managed version control with Git across active development branches, maintaining low-level driver documentation and clean firmware workflows.`
+    ];
+
+    projectBullets = [
+      `Wrote ESP32 firmware to poll pressure and flow sensors over ADC/GPIO, publishing real-time telemetry via MQTT (QoS 1) to cloud infrastructure for automated monitoring.`,
+      `Built an analytics pipeline with Python to detect anomalous pressure fluctuations, decreasing estimated system troubleshooting time.`
+    ];
   } else {
     summary = `Final-year Engineering student at Walchand Institute of Technology (9.27 CGPA) with hands-on proficiency in ${finalSkills.slice(0, 4).join(', ')}. Built distributed cloud telemetry agents and serverless pipelines (LabPulse) with automated Docker CI/CD workflows. Seeking the ${title || 'Python Developer'} role to engineer scalable backend and cloud solutions.`;
+
+    experienceBullets = [
+      `Developed automated Python validation scripts to parse and verify communication logs from peripheral modules during internship testing.`,
+      `Optimized data serialization and reduced log processing latency across multi-branch development environments.`,
+      `Collaborated using Git/GitHub workflows and automated unit testing to ensure high code reliability before deployment.`
+    ];
+
+    projectBullets = [
+      `Engineered LabPulse, an automated background telemetry agent utilizing Python and AWS Serverless (Lambda, DynamoDB, API Gateway) for real-time metrics tracking.`,
+      `Constructed containerized CI/CD deployment pipelines using Docker, automating testing and environment provisioning.`
+    ];
   }
 
   return {
     summary,
     highlightedSkills: finalSkills,
-    projectFocus: category === 'embedded' ? 'Codec Technologies' : 'LabPulse',
+    experienceBullets,
+    projectBullets,
+    projectFocus: category === 'embedded' ? 'AQUANOVA' : 'LabPulse',
   };
 }
 
