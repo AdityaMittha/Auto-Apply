@@ -143,16 +143,16 @@ Copy `.env.example` to `.env` and configure your credentials:
 
 ```env
 # Google Account (Used for Naukri automated login)
-GOOGLE_EMAIL=adityamittha09@gmail.com
+GOOGLE_EMAIL=***********@gmail.com
 GOOGLE_PASSWORD=your-password
 NAUKRI_PROFILE_URL=https://www.naukri.com/mnjuser/profile
 
 # Candidate Profile
 NAME=Aditya Mittha
-EMAIL=adityamittha09@gmail.com
-PHONE=+91 8010542551
+EMAIL=************@gmail.com
+PHONE=+91 *********
 LOCATION=Solapur, India
-EDUCATION=Bachelor's Degree in Electronics and Telecommunication, Walchand Institute Of Technology (2023-2027)
+EDUCATION=Bachelor's Degree in Electronics and Telecommunication
 SKILLS=Embedded C, Python, FreeRTOS, ARM Cortex-M, ESP32, Raspberry Pi, UART, SPI, I2C, CAN, MQTT, AWS, Docker, Linux, Git
 
 # Gemini AI (Resume Tailoring & Screening Answers)
@@ -161,8 +161,8 @@ GEMINI_MODEL=gemini-3.6-flash
 AI_ENABLED=true
 
 # Email Digest & Cold Outreach Settings
-REPORT_EMAIL_TO=adityamittha09@gmail.com
-SMTP_USER=adityamittha09@gmail.com
+REPORT_EMAIL_TO=***********@gmail.com
+SMTP_USER=********@gmail.com
 SMTP_PASS=your-gmail-app-password
 COLD_EMAIL_ENABLED=true
 COLD_EMAIL_MAX_PER_DAY=10
@@ -177,7 +177,7 @@ AUTO_APPLY_MIN_MATCH_SCORE=50
 DRY_RUN=false
 
 # Amazon S3 Storage
-S3_BUCKET_NAME=auto-apply-aditya-mittha
+S3_BUCKET_NAME=auto-apply
 AWS_REGION=ap-south-1
 ```
 
