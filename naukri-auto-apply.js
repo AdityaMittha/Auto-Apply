@@ -83,38 +83,57 @@ function sleep(ms) {
     let currentUrl = new URL(page.url());
 
     if (!onProfile(currentUrl)) {
-      log(`⚠️ Not logged into Naukri! Attempting automated sign-in with Google...`);
+      log(`⚠️ Not logged into Naukri! Attempting direct portal login with Email & Password...`);
       try {
         await page.goto('https://www.naukri.com/nlogin/login?URL=https://www.naukri.com/mnjuser/profile', {
           waitUntil: 'domcontentloaded', timeout: 60000,
         });
-        const googleBtn = page.locator('.socialbtn.google, [class*="socialbtn"][class*="google"]').first();
-        if (await googleBtn.isVisible().catch(() => false)) {
-          await googleBtn.click();
-          let g = null;
-          for (let i = 0; i < 20 && !g; i++) {
-            await page.waitForTimeout(1000);
-            g = ctx.pages().find((p) => /accounts\.google\./.test(p.url())) || null;
-          }
-          if (g) {
-            await g.waitForLoadState('domcontentloaded');
-            const knownAccount = g.locator(`[data-email="${CREDS.email}"]`).first();
-            if (await knownAccount.isVisible().catch(() => false)) {
-              await knownAccount.click();
-            } else {
-              const emailBox = g.locator('input#identifierId, input[type="email"]').first();
-              if (await emailBox.isVisible().catch(() => false)) {
-                await emailBox.fill(CREDS.email);
-                await g.locator('#identifierNext, button:has-text("Next")').first().click();
-                await page.waitForTimeout(2000);
-                const passBox = g.locator('input[type="password"]').first();
-                if (await passBox.isVisible().catch(() => false)) {
-                  await passBox.fill(CREDS.password);
-                  await g.locator('#passwordNext, button:has-text("Next")').first().click();
+        await page.waitForTimeout(2000);
+
+        // 1. Direct Email + Password Login on Naukri (Never triggers Google 2FA prompt)
+        const userBox = page.locator('#usernameField, input[placeholder*="Username"], input[placeholder*="Email"], input[type="text"]').first();
+        const passBox = page.locator('#passwordField, input[placeholder*="Password"], input[type="password"]').first();
+        const submitBtn = page.locator('button[type="submit"], button.loginButton, button:has-text("Login")').first();
+
+        if (await userBox.isVisible().catch(() => false) && await passBox.isVisible().catch(() => false)) {
+          log(`   Filling Naukri direct credentials...`);
+          await userBox.fill(CREDS.email);
+          await page.waitForTimeout(400);
+          await passBox.fill(CREDS.password);
+          await page.waitForTimeout(400);
+          await submitBtn.click();
+          await page.waitForTimeout(5000);
+        } else {
+          // 2. Secondary fallback only if direct form is absent
+          const googleBtn = page.locator('.socialbtn.google, [class*="socialbtn"][class*="google"]').first();
+          if (await googleBtn.isVisible().catch(() => false)) {
+            log(`   Direct form not found, attempting Google SSO...`);
+            await googleBtn.click();
+            let g = null;
+            for (let i = 0; i < 20 && !g; i++) {
+              await page.waitForTimeout(1000);
+              g = ctx.pages().find((p) => /accounts\.google\./.test(p.url())) || null;
+            }
+            if (g) {
+              await g.waitForLoadState('domcontentloaded');
+              const knownAccount = g.locator(`[data-email="${CREDS.email}"]`).first();
+              if (await knownAccount.isVisible().catch(() => false)) {
+                await knownAccount.click();
+              } else {
+                const emailBox = g.locator('input#identifierId, input[type="email"]').first();
+                if (await emailBox.isVisible().catch(() => false)) {
+                  await emailBox.fill(CREDS.email);
+                  await g.locator('#identifierNext, button:has-text("Next")').first().click();
+                  await page.waitForTimeout(2000);
+                  const pBox = g.locator('input[type="password"]').first();
+                  if (await pBox.isVisible().catch(() => false)) {
+                    await pBox.fill(CREDS.password);
+                    await g.locator('#passwordNext, button:has-text("Next")').first().click();
+                  }
                 }
               }
+              await page.waitForTimeout(4000);
             }
-            await page.waitForTimeout(4000);
           }
         }
       } catch (authErr) {

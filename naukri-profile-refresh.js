@@ -31,38 +31,61 @@ const log = (msg) => {
 const onProfile = (url) => url.pathname.startsWith('/mnjuser');
 
 async function googleLogin(ctx, page) {
-  log('Session gone — signing in with Google...');
+  log('Session expired — attempting direct Naukri email & password login (bypassing Google 2FA)...');
   await page.goto(LOGIN_URL, {
     waitUntil: 'domcontentloaded', timeout: 60000,
   });
+  await page.waitForTimeout(2000);
 
-  // Naukri's "Sign in with Google" is a plain div.socialbtn.google
-  const googleBtn = page.locator('.socialbtn.google, [class*="socialbtn"][class*="google"]').first();
-  await googleBtn.waitFor({ timeout: 20000 });
-  await googleBtn.click();
+  // 1. Direct Email + Password Login on Naukri
+  const userBox = page.locator('#usernameField, input[placeholder*="Username"], input[placeholder*="Email"], input[type="text"]').first();
+  const passBox = page.locator('#passwordField, input[placeholder*="Password"], input[type="password"]').first();
+  const submitBtn = page.locator('button[type="submit"], button.loginButton, button:has-text("Login")').first();
 
-  // The Google sign-in may open a popup OR replace the current tab — find it either way
-  let g = null;
-  for (let i = 0; i < 30 && !g; i++) {
-    await page.waitForTimeout(1000);
-    g = ctx.pages().find((p) => /accounts\.google\./.test(p.url())) || null;
-  }
-  if (!g) throw new Error('Google sign-in page never appeared');
-  await g.waitForLoadState('domcontentloaded');
-
-  // Account already known to this Chrome profile → click it, else full email+password
-  const knownAccount = g.locator(`[data-email="${CREDS.email}"]`).first();
-  if (await knownAccount.isVisible().catch(() => false)) {
-    await knownAccount.click();
-  } else {
-    const emailBox = g.locator('input#identifierId, input[type="email"], input[name="identifier"]').first();
-    await emailBox.waitFor({ state: 'visible', timeout: 60000 });
-    await emailBox.fill(CREDS.email);
-    await g.locator('#identifierNext, button:has-text("Next")').first().click();
-    const passBox = g.locator('input[type="password"], input[name="Passwd"]').first();
-    await passBox.waitFor({ state: 'visible', timeout: 60000 });
+  if (await userBox.isVisible().catch(() => false) && await passBox.isVisible().catch(() => false)) {
+    log('Filling direct Naukri credentials...');
+    await userBox.fill(CREDS.email);
+    await page.waitForTimeout(400);
     await passBox.fill(CREDS.password);
-    await g.locator('#passwordNext, button:has-text("Next")').first().click();
+    await page.waitForTimeout(400);
+    await submitBtn.click();
+    await page.waitForTimeout(5000);
+
+    await page.goto(PROFILE_URL, { waitUntil: 'domcontentloaded', timeout: 45000 }).catch(() => {});
+    if (onProfile(new URL(page.url()))) {
+      log('Direct Naukri login successful! Session saved.');
+      return page;
+    }
+  }
+
+  // 2. Secondary fallback only if direct login did not complete
+  log('Direct login not available, falling back to Google SSO...');
+  const googleBtn = page.locator('.socialbtn.google, [class*="socialbtn"][class*="google"]').first();
+  await googleBtn.waitFor({ timeout: 15000 }).catch(() => {});
+  if (await googleBtn.isVisible().catch(() => false)) {
+    await googleBtn.click();
+
+    let g = null;
+    for (let i = 0; i < 30 && !g; i++) {
+      await page.waitForTimeout(1000);
+      g = ctx.pages().find((p) => /accounts\.google\./.test(p.url())) || null;
+    }
+    if (!g) throw new Error('Google sign-in page never appeared');
+    await g.waitForLoadState('domcontentloaded');
+
+    const knownAccount = g.locator(`[data-email="${CREDS.email}"]`).first();
+    if (await knownAccount.isVisible().catch(() => false)) {
+      await knownAccount.click();
+    } else {
+      const emailBox = g.locator('input#identifierId, input[type="email"], input[name="identifier"]').first();
+      await emailBox.waitFor({ state: 'visible', timeout: 60000 });
+      await emailBox.fill(CREDS.email);
+      await g.locator('#identifierNext, button:has-text("Next")').first().click();
+      const passBox = g.locator('input[type="password"], input[name="Passwd"]').first();
+      await passBox.waitFor({ state: 'visible', timeout: 60000 });
+      await passBox.fill(CREDS.password);
+      await g.locator('#passwordNext, button:has-text("Next")').first().click();
+    }
   }
 
   // Wait until any tab lands back on the logged-in naukri profile
