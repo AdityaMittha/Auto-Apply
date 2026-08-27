@@ -72,65 +72,64 @@ echo ""
 echo "📂 Ensuring remote directory exists..."
 $SSH_CMD "mkdir -p ${REMOTE_DIR}/resume"
 
-# --- 1. Upload .env ---
+# --- 1. Upload Application Code & Config ---
 echo ""
-echo "🔐 [1/6] Uploading .env (credentials & config)..."
-upload_file ".env" "${REMOTE_DIR}/.env"
+echo "🚀 [1/6] Uploading application code (*.js, package.json, .env)..."
+for f in *.js package.json .env; do
+  upload_file "$f" "${REMOTE_DIR}/$f"
+done
 
-# --- 2. Upload resumes ---
+# --- 2. Upload Resumes & Templates ---
 echo ""
 echo "📄 [2/6] Uploading resumes..."
 if [ -d "resume" ]; then
   for f in resume/*; do
-    upload_file "$f" "${REMOTE_DIR}/resume/$(basename "$f")"
+    if [ -f "$f" ]; then
+      upload_file "$f" "${REMOTE_DIR}/resume/$(basename "$f")"
+    fi
   done
 else
   echo "   ⚠️  resume/ directory not found."
 fi
 
-# --- 3. Upload Naukri Chrome profile ---
+# --- 3. Upload All Portal Chrome Profiles ---
 echo ""
-echo "🌐 [3/6] Uploading Naukri Chrome profile..."
-if [ -d ".naukri-chrome-profile" ]; then
-  # Compress first for faster transfer
-  echo "   Compressing profile..."
-  tar czf /tmp/naukri-profile.tar.gz -C . .naukri-chrome-profile
-  scp ${SCP_OPTS} /tmp/naukri-profile.tar.gz "${EC2_USER}@${EC2_IP}:/tmp/"
-  $SSH_CMD "cd ${REMOTE_DIR} && tar xzf /tmp/naukri-profile.tar.gz && rm /tmp/naukri-profile.tar.gz"
-  rm /tmp/naukri-profile.tar.gz
-  echo "   ✅ Naukri Chrome profile uploaded."
-else
-  echo "   ⚠️  .naukri-chrome-profile/ not found, skipping."
-  echo "   You'll need to do a manual login on EC2 (./run.sh login via VNC)."
-fi
+echo "🌐 [3/6] Uploading Portal Chrome Profiles..."
+PROFILES=(
+  ".naukri-chrome-profile"
+  ".internshala-chrome-profile"
+  ".linkedin-chrome-profile"
+  ".indeed-chrome-profile"
+  ".wellfound-chrome-profile"
+  ".foundit-chrome-profile"
+)
 
-# --- 4. Upload Internshala Chrome profile ---
-echo ""
-echo "🌐 [4/6] Uploading Internshala Chrome profile..."
-if [ -d ".internshala-chrome-profile" ]; then
-  echo "   Compressing profile..."
-  tar czf /tmp/internshala-profile.tar.gz -C . .internshala-chrome-profile
-  scp ${SCP_OPTS} /tmp/internshala-profile.tar.gz "${EC2_USER}@${EC2_IP}:/tmp/"
-  $SSH_CMD "cd ${REMOTE_DIR} && tar xzf /tmp/internshala-profile.tar.gz && rm /tmp/internshala-profile.tar.gz"
-  rm /tmp/internshala-profile.tar.gz
-  echo "   ✅ Internshala Chrome profile uploaded."
-else
-  echo "   ⚠️  .internshala-chrome-profile/ not found, skipping."
-fi
+for p in "${PROFILES[@]}"; do
+  if [ -d "$p" ]; then
+    echo "   Compressing $p..."
+    tar czf "/tmp/${p}.tar.gz" -C . "$p" 2>/dev/null || true
+    if [ -f "/tmp/${p}.tar.gz" ]; then
+      scp ${SCP_OPTS} "/tmp/${p}.tar.gz" "${EC2_USER}@${EC2_IP}:/tmp/"
+      $SSH_CMD "cd ${REMOTE_DIR} && tar xzf /tmp/${p}.tar.gz && rm -f /tmp/${p}.tar.gz"
+      rm -f "/tmp/${p}.tar.gz"
+      echo "   ✅ $p uploaded."
+    fi
+  else
+    echo "   ℹ️  $p not found locally (will use server profile)."
+  fi
+done
 
-# --- 5. Upload applied jobs history ---
+# --- 4. Upload Applied Jobs History ---
 echo ""
-echo "📊 [5/6] Uploading applied-jobs.json (application history)..."
+echo "📊 [4/6] Uploading applied-jobs.json..."
 upload_file "applied-jobs.json" "${REMOTE_DIR}/applied-jobs.json"
 
-# --- 6. Upload setup & deployment scripts ---
+# --- 5. Upload Server & Deployment Scripts ---
 echo ""
-echo "📜 [6/6] Uploading server scripts..."
-upload_file "server-setup.sh" "${REMOTE_DIR}/server-setup.sh"
-upload_file "health-check.sh" "${REMOTE_DIR}/health-check.sh"
-upload_file "cron-setup.sh" "${REMOTE_DIR}/cron-setup.sh"
-upload_file "run.sh" "${REMOTE_DIR}/run.sh"
-upload_file "start-xvfb.sh" "${REMOTE_DIR}/start-xvfb.sh"
+echo "📜 [5/6] Uploading server scripts..."
+for s in *.sh; do
+  upload_file "$s" "${REMOTE_DIR}/$s"
+done
 
 # Make scripts executable on remote
 $SSH_CMD "chmod +x ${REMOTE_DIR}/*.sh 2>/dev/null || true"

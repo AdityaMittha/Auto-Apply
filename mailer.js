@@ -38,18 +38,31 @@ const RECIPIENT = E.REPORT_EMAIL_TO || CV.email || 'adityamittha09@gmail.com';
 const SMTP_USER = E.SMTP_USER || E.GOOGLE_EMAIL || 'adityamittha09@gmail.com';
 const SMTP_PASS = E.SMTP_PASS || '';
 
+function getResumeServerBaseUrl() {
+  if (process.env.RESUME_SERVER_URL) return process.env.RESUME_SERVER_URL;
+  const deployInfoPath = path.join(__dirname, '.deploy-info');
+  if (fs.existsSync(deployInfoPath)) {
+    try {
+      const content = fs.readFileSync(deployInfoPath, 'utf8');
+      const m = content.match(/DEPLOY_IP=(.*)/);
+      if (m && m[1].trim()) return `http://${m[1].trim()}:3000`;
+    } catch {}
+  }
+  return 'http://localhost:3000';
+}
+
 function getTodayApplications() {
   try {
     if (!fs.existsSync(APPLIED_FILE)) return [];
     const data = JSON.parse(fs.readFileSync(APPLIED_FILE, 'utf8'));
-    const todayStr = new Date().toISOString().slice(0, 10);
-    const oneDayAgo = Date.now() - 24 * 60 * 60 * 1000;
+    const todayIST = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
+    const twentyFourHoursAgo = Date.now() - 24 * 60 * 60 * 1000;
 
     return (data.applied || []).filter(item => {
       if (!item.appliedAt) return false;
-      const itemDate = item.appliedAt.slice(0, 10);
+      const itemDateIST = new Date(item.appliedAt).toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
       const itemTimestamp = new Date(item.appliedAt).getTime();
-      return itemDate === todayStr || itemTimestamp >= oneDayAgo;
+      return itemDateIST === todayIST || itemTimestamp >= twentyFourHoursAgo;
     });
   } catch (err) {
     log(`Error loading applied jobs: ${err.message}`);
@@ -94,6 +107,7 @@ async function attachS3Urls(jobs) {
 
 function buildHtmlReport(jobs) {
   const todayFormatted = new Date().toLocaleDateString('en-IN', {
+    timeZone: 'Asia/Kolkata',
     weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
   });
 
@@ -101,23 +115,28 @@ function buildHtmlReport(jobs) {
   const pythonCount = jobs.filter(j => j.category === 'python_devops').length;
   const tailoredCount = jobs.filter(j => j.isTailored || j.aiEnhanced || (j.tailoredResumePath && j.tailoredResumePath.includes('tailored'))).length;
   const avgScore = jobs.length > 0 ? Math.round(jobs.reduce((acc, j) => acc + (j.matchScore || 0), 0) / jobs.length) : 0;
+  const serverBase = getResumeServerBaseUrl();
 
   const rows = jobs.map((job, idx) => {
     const portal = job.portal || 'Naukri';
     let statusColor = '#6b7280';
     const statusText = (job.status || 'APPLIED').toUpperCase();
-    if (statusText.includes('VIEW') || statusText.includes('ACTION')) statusColor = '#3b82f6';
+    if (statusText.includes('MANUAL') || statusText.includes('REQUIRED')) statusColor = '#ef4444';
+    else if (statusText.includes('VIEW') || statusText.includes('ACTION')) statusColor = '#3b82f6';
     else if (statusText.includes('SHORTLIST')) statusColor = '#8b5cf6';
     else if (statusText.includes('APPLIED')) statusColor = '#10b981';
     else if (statusText.includes('DRY_RUN')) statusColor = '#f59e0b';
     else if (statusText.includes('REDIRECT')) statusColor = '#64748b';
 
     const badgeColor = job.category === 'embedded' ? '#3b82f6' : '#8b5cf6';
-    const time = new Date(job.appliedAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+    const time = new Date(job.appliedAt).toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit' });
     const resumeDisplay = job.resumeUsed || (job.category === 'python_devops' ? 'Mittha_Aditya.pdf' : 'Mittha_Aditya_Embedded.pdf');
     const isTailoredBadge = (job.isTailored || (job.tailoredResumePath && job.tailoredResumePath.includes('tailored')))
       ? `<span style="background: #ecfdf5; color: #059669; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 600; margin-left: 4px;">✨ ATS Tailored</span>`
       : '';
+    const statusDisplay = job.status === 'EXTERNAL_MANUAL_REQUIRED'
+      ? `<span style="background: #fee2e2; color: #dc2626; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: 700;">⚠️ 1-Click Action Required</span>`
+      : `<span style="background: ${statusColor}15; color: ${statusColor}; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: 600;">${job.status || 'APPLIED'}</span>`;
 
     const recruiterInfo = job.recruiterEmail
       ? `<div style="font-size: 11px; color: #2563eb; margin-top: 2px;">✉️ ${job.recruiterEmail}</div>`
@@ -128,9 +147,9 @@ function buildHtmlReport(jobs) {
     if (!directResumeUrl) {
       if (job.tailoredResumePath) {
         const tailoredFile = path.basename(job.tailoredResumePath);
-        directResumeUrl = `http://13.234.182.177:3000/resume/tailored/${encodeURIComponent(tailoredFile)}`;
+        directResumeUrl = `${serverBase}/resume/tailored/${encodeURIComponent(tailoredFile)}`;
       } else {
-        directResumeUrl = `http://13.234.182.177:3000/resume/${encodeURIComponent(resumeDisplay)}`;
+        directResumeUrl = `${serverBase}/resume/${encodeURIComponent(resumeDisplay)}`;
       }
     }
 
@@ -163,9 +182,8 @@ function buildHtmlReport(jobs) {
           ${isTailoredBadge ? `<div style="margin-top: 3px;">${isTailoredBadge}</div>` : ''}
         </td>
         <td style="padding: 12px 14px; text-align: center;">
-          <span style="background: ${statusColor}15; color: ${statusColor}; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: 600;">
-            ${job.status || 'APPLIED'}
-          </span>
+          ${statusDisplay}
+          ${job.reason ? `<div style="font-size: 10px; color: #dc2626; margin-top: 2px;">(${job.reason})</div>` : ''}
           <div style="font-size: 11px; color: #9ca3af; margin-top: 2px;">${time}</div>
         </td>
         <td style="padding: 12px 14px; text-align: center;">

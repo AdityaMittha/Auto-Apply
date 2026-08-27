@@ -15,23 +15,42 @@ const { tailorAndCompileResume } = require('./resume-compiler');
 
 const RESUMES = {
   embedded: path.join(__dirname, 'resume', 'Mittha_Aditya_Embedded.pdf'),
+  embedded_software: path.join(__dirname, 'resume', 'Mittha_Aditya_Embedded_Software.pdf'),
   python_devops: path.join(__dirname, 'resume', 'Mittha_Aditya.pdf'),
-  default: path.join(__dirname, 'resume', 'Mittha_Aditya_Embedded.pdf'),
+  data_analytics: path.join(__dirname, 'resume', 'Mittha_Aditya_Data_Analytics.pdf'),
+  default: path.join(__dirname, 'resume', 'Mittha_Aditya_Embedded_Software.pdf'),
 };
 
 const EMBEDDED_KEYWORDS = [
   'embedded', 'firmware', 'c', 'embedded c', 'c++', 'microcontroller', 'mcu',
-  'arm', 'cortex', 'esp32', 'arduino', 'raspberry pi', 'rtos', 'freertos',
-  'uart', 'spi', 'i2c', 'can', 'mqtt', 'gpio', 'adc', 'sensor', 'sensors',
-  'iot', 'hardware', 'pcb', 'bare-metal', 'logic analyzer', 'verilog',
-  'device driver', 'telemetry', 'zigbee', 'ble', 'bluetooth'
+  'arm', 'cortex', 'cortex-m', 'stm32', 'esp32', 'arduino', 'raspberry pi', 'rtos', 'freertos',
+  'uart', 'spi', 'i2c', 'can', 'can bus', 'mqtt', 'gpio', 'adc', 'dac', 'pwm', 'sensor', 'sensors',
+  'iot', 'hardware', 'pcb', 'bare-metal', 'logic analyzer', 'verilog', 'fpga', 'mechatronics',
+  'device driver', 'telemetry', 'zigbee', 'ble', 'bluetooth', 'robotics', 'electronics', 'e&tc', 'telecom', 'stem'
+];
+
+const EMBEDDED_SOFTWARE_KEYWORDS = [
+  'embedded software', 'embedded software engineer', 'embedded software developer', 'firmware engineer',
+  'firmware developer', 'device driver', 'bsp', 'board support package', 'hal', 'hardware abstraction',
+  'embedded c', 'embedded c++', 'freertos', 'rtos', 'bare-metal', 'state machine', 'fsm', 'ring buffer',
+  'arm cortex', 'stm32', 'esp32', 'esp-idf', 'isr', 'interrupt', 'misra', 'gdb', 'openocd', 'jtag', 'swd'
+];
+
+const DATA_ANALYTICS_KEYWORDS = [
+  'data analyst', 'data analytics', 'data science', 'data scientist', 'business analyst',
+  'business intelligence', 'bi analyst', 'bi developer', 'sql', 'pandas', 'numpy', 'scipy',
+  'tableau', 'power bi', 'powerbi', 'eda', 'exploratory data analysis', 'statistics', 'statistical',
+  'matplotlib', 'seaborn', 'plotly', 'excel', 'pivot table', 'data visualization', 'data cleaning',
+  'data wrangling', 'etl', 'data pipeline', 'feature engineering', 'scikit-learn', 'data modeling',
+  'time-series', 'forecasting', 'anomaly detection', 'data engineering', 'analytics intern'
 ];
 
 const PYTHON_DEVOPS_KEYWORDS = [
-  'python', 'devops', 'aws', 'lambda', 'dynamodb', 'api gateway', 's3',
-  'docker', 'container', 'ci/cd', 'github actions', 'cloud', 'backend',
-  'automation', 'bash', 'shell', 'linux', 'ubuntu', 'rest api', 'fastapi',
-  'flask', 'django', 'pandas', 'numpy', 'scikit-learn', 'machine learning'
+  'python', 'devops', 'aws', 'lambda', 'dynamodb', 'api gateway', 's3', 'iot core',
+  'docker', 'container', 'ci/cd', 'github actions', 'cloud', 'backend', 'full stack',
+  'automation', 'bash', 'shell', 'linux', 'ubuntu', 'rest api', 'api', 'fastapi',
+  'flask', 'django', 'pandas', 'numpy', 'scikit-learn', 'machine learning', 'data structures',
+  'software', 'developer', 'engineer', 'git', 'github', 'testing', 'postman'
 ];
 
 /**
@@ -41,12 +60,30 @@ const PYTHON_DEVOPS_KEYWORDS = [
 function keywordAnalysis(title = '', jdText = '', requiredSkills = []) {
   const content = `${title} ${requiredSkills.join(' ')} ${jdText}`.toLowerCase();
 
+  let embeddedSoftwareMatches = 0;
+  const matchedEmbeddedSoftware = [];
+  for (const kw of EMBEDDED_SOFTWARE_KEYWORDS) {
+    if (content.includes(kw)) {
+      embeddedSoftwareMatches++;
+      matchedEmbeddedSoftware.push(kw);
+    }
+  }
+
   let embeddedMatches = 0;
   const matchedEmbedded = [];
   for (const kw of EMBEDDED_KEYWORDS) {
     if (content.includes(kw)) {
       embeddedMatches++;
       matchedEmbedded.push(kw);
+    }
+  }
+
+  let analyticsMatches = 0;
+  const matchedAnalytics = [];
+  for (const kw of DATA_ANALYTICS_KEYWORDS) {
+    if (content.includes(kw)) {
+      analyticsMatches++;
+      matchedAnalytics.push(kw);
     }
   }
 
@@ -59,11 +96,19 @@ function keywordAnalysis(title = '', jdText = '', requiredSkills = []) {
     }
   }
 
-  const totalMatches = embeddedMatches + pythonMatches;
-  let category = 'embedded';
-  let selectedResume = RESUMES.embedded;
+  let category = 'embedded_software';
+  let selectedResume = RESUMES.embedded_software;
 
-  if (pythonMatches > embeddedMatches && !content.includes('embedded') && !content.includes('firmware')) {
+  const isExplicitAnalytics = content.includes('data analyst') || content.includes('data analytics') || content.includes('business analyst') || content.includes('bi ') || content.includes('tableau') || content.includes('power bi');
+  const isExplicitEmbeddedSoftware = content.includes('embedded software') || content.includes('firmware developer') || content.includes('firmware engineer') || content.includes('device driver') || content.includes('embedded c++') || content.includes('bsp');
+
+  if (isExplicitAnalytics || (analyticsMatches > embeddedMatches && analyticsMatches > pythonMatches && analyticsMatches > embeddedSoftwareMatches)) {
+    category = 'data_analytics';
+    selectedResume = RESUMES.data_analytics;
+  } else if (isExplicitEmbeddedSoftware || embeddedSoftwareMatches > 0 || (content.includes('embedded') && (content.includes('software') || content.includes('developer') || content.includes('engineer')))) {
+    category = 'embedded_software';
+    selectedResume = RESUMES.embedded_software;
+  } else if (pythonMatches > embeddedMatches && !content.includes('embedded') && !content.includes('firmware') && !content.includes('microcontroller')) {
     category = 'python_devops';
     selectedResume = RESUMES.python_devops;
   } else {
@@ -71,13 +116,22 @@ function keywordAnalysis(title = '', jdText = '', requiredSkills = []) {
     selectedResume = RESUMES.embedded;
   }
 
-  // Calculate score (0 - 100) based on keyword density & relevant hits
-  const matchScore = Math.min(100, Math.round((totalMatches / 8) * 100));
+  // Calculate realistic, continuous score (50 - 95% for domain hits)
+  let hits = matchedEmbeddedSoftware.length > 0 ? matchedEmbeddedSoftware : matchedEmbedded;
+  if (category === 'data_analytics') hits = matchedAnalytics;
+  else if (category === 'python_devops') hits = matchedPython;
+  else if (category === 'embedded') hits = matchedEmbedded;
+
+  const uniqueHits = new Set(hits).size;
+  let matchScore = 50;
+  if (uniqueHits > 0) {
+    matchScore = Math.min(95, Math.max(50, 50 + Math.round((uniqueHits / 5) * 45)));
+  }
 
   return {
     category,
-    matchScore: Math.max(matchScore, totalMatches > 0 ? 50 : 20),
-    matchedKeywords: category === 'embedded' ? matchedEmbedded : matchedPython,
+    matchScore,
+    matchedKeywords: hits,
     selectedResume,
     resumeName: path.basename(selectedResume),
     // AI fields (empty for keyword-only)
@@ -116,10 +170,12 @@ async function analyzeJob(title = '', jdText = '', requiredSkills = [], opts = {
   let matchedSkills = [];
   let missingSkills = [];
   let reasoning = '';
+  let interviewTips = [];
+  let highlightedSkills = [];
   let aiEnhanced = false;
 
-  // Step 2: AI refinement (optional)
-  if (aiEnabled && geminiKey && cv) {
+  // Step 2: AI refinement (or deterministic local model)
+  if (aiEnabled && cv) {
     try {
       const aiResult = await analyzeJobWithAI(title, jdText, cv, geminiKey);
       if (aiResult) {
@@ -128,6 +184,8 @@ async function analyzeJob(title = '', jdText = '', requiredSkills = [], opts = {
         matchedSkills = aiResult.matchedSkills || [];
         missingSkills = aiResult.missingSkills || [];
         reasoning = aiResult.reasoning || '';
+        interviewTips = aiResult.interviewTips || [];
+        highlightedSkills = aiResult.highlightedSkills || [];
         aiEnhanced = true;
       }
     } catch {
@@ -141,6 +199,7 @@ async function analyzeJob(title = '', jdText = '', requiredSkills = [], opts = {
   let s3Key = null;
   let s3Url = null;
   let isTailored = false;
+  let tailoredSummary = '';
 
   try {
     const tailoredRes = await tailorAndCompileResume({
@@ -157,6 +216,7 @@ async function analyzeJob(title = '', jdText = '', requiredSkills = [], opts = {
       s3Key = tailoredRes.s3Key || null;
       s3Url = tailoredRes.s3Url || null;
       isTailored = tailoredRes.isTailored;
+      tailoredSummary = tailoredRes.tailoredSummary || '';
     }
   } catch {}
 
@@ -170,10 +230,13 @@ async function analyzeJob(title = '', jdText = '', requiredSkills = [], opts = {
     s3Url,
     resumeName: path.basename(selectedResume),
     isTailored,
-    // AI-enhanced fields
+    // AI-enhanced & insight fields
     matchedSkills,
     missingSkills,
     reasoning,
+    interviewTips,
+    highlightedSkills,
+    tailoredSummary,
     aiEnhanced,
   };
 }

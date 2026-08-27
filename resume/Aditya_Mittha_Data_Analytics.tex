@@ -1,0 +1,142 @@
+%-------------------------
+% Resume in LaTeX - ATS Optimized for Data Analytics Roles
+% Author: Aditya Mittha
+%-------------------------
+
+\documentclass[letterpaper,12pt]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[empty]{fullpage}
+\usepackage{titlesec}
+\usepackage[usenames,dvipsnames]{color}
+\usepackage{enumitem}
+\usepackage[hidelinks]{hyperref}
+\usepackage{geometry}
+
+% custom font: helvetica-style
+\usepackage{tgheros}
+\renewcommand*\familydefault{\sfdefault}
+
+\geometry{left=0.55in, right=0.55in, top=0.45in, bottom=0.45in}
+
+\pagestyle{empty}
+
+\urlstyle{same}
+\raggedbottom
+\raggedright
+\setlength{\tabcolsep}{0in}
+\setlength{\parindent}{0pt}
+
+% Section formatting — clean, ATS-parseable
+\titleformat{\section}{
+  \vspace{-8pt}\bfseries\large\scshape\raggedright
+}{}{0em}{}[\color{black}\titlerule\vspace{-6pt}]
+
+% Bullet list settings
+\newcommand{\resumeItemListStart}{\begin{itemize}[leftmargin=0.2in, topsep=2pt, parsep=0pt, itemsep=1pt]}
+\newcommand{\resumeItemListEnd}{\end{itemize}\vspace{-4pt}}
+\newcommand{\resumeItem}[1]{\item\small{#1}}
+
+%-------------------------------------------
+\begin{document}
+
+%----------HEADING----------
+\begin{center}
+  {\LARGE \textbf{Aditya Mittha}} \\[4pt]
+  \small
+  +91-8010542551 \enspace $|$ \enspace
+  \href{mailto:adityamittha09@gmail.com}{adityamittha09@gmail.com} \enspace $|$ \enspace
+  \href{https://www.linkedin.com/in/adityamittha}{linkedin.com/in/adityamittha} \enspace $|$ \enspace
+  \href{https://github.com/AdityaMittha}{github.com/AdityaMittha} \enspace $|$ \enspace
+  Solapur, India
+\end{center}
+
+\vspace{-14pt}
+
+%-----------SUMMARY-----------
+\section{Summary}
+\small
+Final-year Electronics and Telecommunication engineering student (9.27 CGPA) with strong technical competence in Data Analytics, Python, SQL, and Statistical Modeling. Experienced in building automated ETL pipelines, performing Exploratory Data Analysis (EDA) on structured and time-series datasets, and developing machine learning models using Pandas, NumPy, and Scikit-Learn. Skilled at transforming raw telemetry and business metrics into actionable insights via Matplotlib, Seaborn, and interactive dashboards. Proven track record deploying cloud data solutions on AWS and solving quantitative engineering challenges.
+
+\vspace{-4pt}
+
+%-----------SKILLS-----------
+\section{Skills}
+\small
+\begin{itemize}[leftmargin=0.2in, label={}, topsep=0pt, parsep=1pt, itemsep=1pt]
+  \item \textbf{Programming \& Querying:} Python (Pandas, NumPy, Scikit-Learn, SciPy), SQL (PostgreSQL, MySQL), Bash, C
+  \item \textbf{Data Analytics \& Modeling:} Exploratory Data Analysis (EDA), Statistical Testing, Data Wrangling, Time-Series
+  \item \textbf{Data Visualization \& BI:} Matplotlib, Seaborn, Plotly, Tableau, Power BI, Advanced Excel (Pivot Tables)
+  \item \textbf{Cloud, Databases \& ETL:} AWS (DynamoDB, Lambda, S3, API Gateway), PostgreSQL, REST APIs, Docker, Git
+  \item \textbf{Soft Skills:} Analytical Problem Solving, Data Storytelling, Business Acumen, Cross-Functional Collaboration
+\end{itemize}
+
+\vspace{-8pt}
+
+%-----------EDUCATION-----------
+\section{Education}
+\textbf{Bachelor's Degree in Electronics and Telecommunication} \hfill 2027 \\
+\textit{Walchand Institute Of Technology} \hfill CGPA: 9.27
+
+\vspace{2pt}
+
+\textbf{Higher Schooling} \hfill 2023 \\
+\textit{D.H.B Soni College, Solapur} \hfill Percentage: 83\%
+
+\vspace{-2pt}
+
+%-----------WORK EXPERIENCE-----------
+\section{Work Experience}
+\textbf{Data \& Telemetry Analytics Intern} \hfill May 2025 -- June 2025 \\
+\textit{Codec Technologies India} \hfill \textit{Remote}
+\resumeItemListStart
+  \resumeItem{Designed automated data ingestion pipelines to process serial communication logs (UART, I\textsuperscript{2}C), reducing latency by 35\%.}
+  \resumeItem{Performed exploratory data analysis and statistical anomaly detection on sensor logs, identifying 10+ defect patterns.}
+  \resumeItem{Structured and queried time-series device logs using SQL and Python to build automated data health reports.}
+  \resumeItem{Managed version-controlled analytical scripts and reproducible pipelines using Git and GitHub in a Linux environment.}
+\resumeItemListEnd
+\small{\textbf{Technologies:} Python, SQL, Pandas, NumPy, Time-Series Analysis, ETL Pipelines, Git, Linux}
+
+\vspace{-2pt}
+
+%-----------PROJECTS-----------
+\section{Projects}
+
+\textbf{\href{https://github.com/AdityaMittha/LabPulse}{LabPulse -- Cloud Telemetry \& Quantitative Analytics Platform}} \hfill 2026
+\resumeItemListStart
+  \resumeItem{Engineered an end-to-end data pipeline streaming user session telemetry to an AWS serverless data lake (DynamoDB, S3).}
+  \resumeItem{Implemented statistical outlier detection and usage analytics in Python, processing over 10,000+ daily telemetry events.}
+  \resumeItem{Containerized analytics workloads using Docker and established CI/CD automation via GitHub Actions.}
+  \resumeItem{Designed dynamic reporting dashboards tracking peak system concurrency, device error rates, and user engagement metrics.}
+\resumeItemListEnd
+\small{\textbf{Role:} Backend Lead, Cloud \& Data Pipeline} \\
+\small{\textbf{Tech Stack:} Python, SQL, Pandas, AWS DynamoDB, Lambda, S3, Docker, GitHub Actions}
+
+\vspace{6pt}
+
+\textbf{\href{https://github.com/AdityaMittha/AQUANOVA}{AQUANOVA -- IoT Telemetry Analytics \& Predictive Anomaly Detection}} \hfill 2025
+\resumeItemListStart
+  \resumeItem{Developed an IoT telemetry analytics engine in Python (Pandas, Scikit-Learn) to predict pipeline pressure anomalies (92\% acc).}
+  \resumeItem{Cleaned and normalized real-time noisy sensor time-series data using moving-window averages and standard deviation filtering.}
+  \resumeItem{Visualized pressure degradation curves and flow rate distributions using Matplotlib and Seaborn for predictive maintenance.}
+\resumeItemListEnd
+\small{\textbf{Role:} Solo Project --- Data Analytics \& System Design} \\
+\small{\textbf{Tech Stack:} Python, Scikit-Learn, Pandas, NumPy, Matplotlib, MQTT, Sensor Telemetry}
+
+%-------------------------------------------
+\section{Rewards \& Achievements}
+\resumeItemListStart
+  \resumeItem{2x Winner, National Electronic Quiz Competition (Quizotronics)}
+  \resumeItem{Runner-up, State-level chess championship}
+  \resumeItem{Participated in 4\textsuperscript{+} Hackathons and Technical Data Competitions}
+\resumeItemListEnd
+
+\vspace{-4pt}
+%-----------------
+\section{Languages}
+\small
+English \enspace $|$ \enspace Hindi \enspace $|$ \enspace Marathi \enspace $|$ \enspace Kannada
+
+%-------------------------------------------  
+\end{document}

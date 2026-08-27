@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Autonomous Job Engine — Executive Dashboard</title>
+  <meta name="description" content="Autonomous Job Application Control Center, ATS Match Insights, Tailored LaTeX Resumes, and Recruiter Cold Outreach Tracker for Aditya Mittha">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/dashboard.css">
+</head>
+<body class="dark-theme">
+  <!-- Top Navigation Bar -->
+  <header class="top-nav" id="top-nav-bar">
+    <div class="nav-brand">
+      <div class="brand-logo">
+        <span class="logo-icon">🛰️</span>
+      </div>
+      <div class="brand-text">
+        <h1 class="brand-title">Autonomous Job Engine</h1>
+        <p class="brand-subtitle">Aditya Mittha • Multi-Portal Applied Tracker & ATS Intelligence</p>
+      </div>
+    </div>
+
+    <div class="nav-actions">
+      <div class="status-indicator" id="system-status-indicator">
+        <span class="status-dot pulse-green"></span>
+        <span class="status-label" id="status-label-text">Engine Ready</span>
+      </div>
+
+      <button class="btn btn-secondary" id="btn-refresh-data" title="Refresh Live Data">
+        <span class="btn-icon">🔄</span> Refresh
+      </button>
+
+      <button class="btn btn-primary" id="btn-open-run-modal">
+        <span class="btn-icon">⚡</span> Run Automation
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Application Container -->
+  <main class="main-layout" id="main-app-container">
+    <!-- Sidebar Navigation -->
+    <aside class="sidebar-nav" id="sidebar-navigation">
+      <nav class="nav-menu">
+        <button class="nav-item active" data-view="view-dashboard" id="nav-tab-dashboard">
+          <span class="nav-icon">📊</span>
+          <span class="nav-text">Overview & Stats</span>
+        </button>
+        <button class="nav-item" data-view="view-applications" id="nav-tab-applications">
+          <span class="nav-icon">📋</span>
+          <span class="nav-text">Applied Jobs</span>
+          <span class="badge" id="sidebar-app-count">0</span>
+        </button>
+        <button class="nav-item" data-view="view-resumes" id="nav-tab-resumes">
+          <span class="nav-icon">📄</span>
+          <span class="nav-text">Tailored Resumes</span>
+        </button>
+        <button class="nav-item" data-view="view-cold-emails" id="nav-tab-cold-emails">
+          <span class="nav-icon">✉️</span>
+          <span class="nav-text">Cold Outreach</span>
+          <span class="badge badge-accent" id="sidebar-email-count">0</span>
+        </button>
+        <button class="nav-item" data-view="view-terminal" id="nav-tab-terminal">
+          <span class="nav-icon">🕹️</span>
+          <span class="nav-text">Live Console</span>
+          <span class="live-dot"></span>
+        </button>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="candidate-card">
+          <div class="avatar-ring">AM</div>
+          <div class="candidate-info">
+            <div class="candidate-name">Aditya Mittha</div>
+            <div class="candidate-meta">9.27 CGPA • Embedded & Python</div>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <section class="content-viewport" id="content-viewport">
+      
+      <!-- 1. DASHBOARD OVERVIEW VIEW -->
+      <div class="view-panel active" id="view-dashboard">
+        <!-- KPI Cards Grid -->
+        <div class="kpi-grid">
+          <div class="kpi-card glassmorphic">
+            <div class="kpi-header">
+              <span class="kpi-title">Total Applications</span>
+              <span class="kpi-icon-badge bg-blue">🎯</span>
+            </div>
+            <div class="kpi-value" id="kpi-total-apps">0</div>
+            <div class="kpi-sub">Across 6 Portals + External ATS</div>
+          </div>
+
+          <div class="kpi-card glassmorphic">
+            <div class="kpi-header">
+              <span class="kpi-title">Applications Today</span>
+              <span class="kpi-icon-badge bg-green">⚡</span>
+            </div>
+            <div class="kpi-value" id="kpi-today-apps">0</div>
+            <div class="kpi-sub">Target: 20–40 / day</div>
+          </div>
+
+          <div class="kpi-card glassmorphic">
+            <div class="kpi-header">
+              <span class="kpi-title">Avg ATS Match Score</span>
+              <span class="kpi-icon-badge bg-indigo">🧠</span>
+            </div>
+            <div class="kpi-value" id="kpi-avg-score">0%</div>
+            <div class="kpi-sub">Calculated via Full JD Semantic Analysis</div>
+          </div>
+
+          <div class="kpi-card glassmorphic">
+            <div class="kpi-header">
+              <span class="kpi-title">Tailored LaTeX Resumes</span>
+              <span class="kpi-icon-badge bg-purple">📄</span>
+            </div>
+            <div class="kpi-value" id="kpi-tailored-count">0</div>
+            <div class="kpi-sub">Zero AI Footprint Compilation</div>
+          </div>
+
+          <div class="kpi-card glassmorphic">
+            <div class="kpi-header">
+              <span class="kpi-title">Cold Outreach Sent</span>
+              <span class="kpi-icon-badge bg-amber">✉️</span>
+            </div>
+            <div class="kpi-value" id="kpi-cold-count">0</div>
+            <div class="kpi-sub">Rate-limited to hiring managers</div>
+          </div>
+        </div>
+
+        <!-- Quick Summary & Charts Section -->
+        <div class="dashboard-analytics-grid">
+          <div class="card glassmorphic">
+            <div class="card-header">
+              <h3 class="card-title">🌐 Application Portal Distribution</h3>
+            </div>
+            <div class="portal-bars-container" id="portal-distribution-bars">
+              <!-- Dynamically populated -->
+            </div>
+          </div>
+
+          <div class="card glassmorphic">
+            <div class="card-header">
+              <h3 class="card-title">📌 Application Lifecycle Status</h3>
+            </div>
+            <div class="status-summary-grid" id="status-distribution-grid">
+              <!-- Dynamically populated -->
+            </div>
+          </div>
+        </div>
+
+        <!-- Recent Applications Highlight -->
+        <div class="card glassmorphic">
+          <div class="card-header">
+            <h3 class="card-title">⏱️ Recent Applications</h3>
+            <button class="btn btn-sm btn-ghost" id="btn-view-all-apps">View All ➔</button>
+          </div>
+          <div class="table-responsive">
+            <table class="data-table" id="table-recent-jobs">
+              <thead>
+                <tr>
+                  <th>Role & Company</th>
+                  <th>Portal / ATS</th>
+                  <th>Category</th>
+                  <th>ATS Match</th>
+                  <th>Tailored Resume</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="tbody-recent-jobs">
+                <tr><td colspan="7" class="text-center py-4">Loading applications...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- 2. ALL APPLICATIONS TRACKER VIEW -->
+      <div class="view-panel" id="view-applications">
+        <div class="view-header">
+          <div>
+            <h2 class="view-title">Applied Jobs & Real-Time Status Tracker</h2>
+            <p class="view-subtitle">Detailed log of every application submitted, full JD match scores, and direct links.</p>
+          </div>
+        </div>
+
+        <!-- Filters & Search Toolbar -->
+        <div class="toolbar glassmorphic">
+          <div class="search-box">
+            <span class="search-icon">🔍</span>
+            <input type="text" id="input-search-jobs" placeholder="Search by role, company, location, or keyword..." autocomplete="off">
+          </div>
+
+          <div class="filter-group">
+            <select id="filter-portal" class="select-filter">
+              <option value="all">All Portals (6 Platforms)</option>
+              <option value="Naukri">Naukri</option>
+              <option value="LinkedIn">LinkedIn</option>
+              <option value="Internshala">Internshala</option>
+              <option value="Indeed">Indeed</option>
+              <option value="Wellfound">Wellfound</option>
+              <option value="Foundit">Foundit</option>
+            </select>
+
+            <select id="filter-status" class="select-filter">
+              <option value="all">All Statuses</option>
+              <option value="APPLIED">APPLIED</option>
+              <option value="VIEWED_BY_RECRUITER">VIEWED_BY_RECRUITER</option>
+              <option value="SHORTLISTED">SHORTLISTED</option>
+              <option value="EXTERNAL_MANUAL_REQUIRED">EXTERNAL_MANUAL_REQUIRED</option>
+              <option value="PREVIEW_DRY_RUN">PREVIEW_DRY_RUN</option>
+              <option value="REJECTED">REJECTED</option>
+            </select>
+
+            <select id="filter-category" class="select-filter">
+              <option value="all">All Categories</option>
+              <option value="embedded_software">Embedded Software / Firmware</option>
+              <option value="embedded">Embedded Hardware / IoT</option>
+              <option value="python_devops">Python / DevOps</option>
+              <option value="data_analytics">Data Analytics</option>
+            </select>
+
+            <button class="btn btn-secondary btn-sm" id="btn-reset-filters">Reset</button>
+          </div>
+        </div>
+
+        <!-- Applications Data Table -->
+        <div class="card glassmorphic">
+          <div class="table-responsive">
+            <table class="data-table" id="table-all-jobs">
+              <thead>
+                <tr>
+                  <th style="width: 40px;">#</th>
+                  <th>Role & Company</th>
+                  <th>Portal</th>
+                  <th>Location</th>
+                  <th>ATS Match</th>
+                  <th>Tailored Resume</th>
+                  <th>Status</th>
+                  <th>Applied Time</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="tbody-all-jobs">
+                <tr><td colspan="9" class="text-center py-4">Loading applied jobs...</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="table-footer" id="table-pagination-footer">
+            <span id="pagination-info">Showing 0 of 0 applications</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 3. TAILORED RESUMES VAULT VIEW -->
+      <div class="view-panel" id="view-resumes">
+        <div class="view-header">
+          <div>
+            <h2 class="view-title">Dynamic LaTeX Tailored Resumes Vault</h2>
+            <p class="view-subtitle">Each PDF is individually tailored to the target Job Description with zero AI footprint and compiled via pdflatex.</p>
+          </div>
+        </div>
+
+        <div class="resume-cards-grid" id="resume-vault-grid">
+          <!-- Dynamically populated -->
+        </div>
+      </div>
+
+      <!-- 4. COLD OUTREACH CENTER VIEW -->
+      <div class="view-panel" id="view-cold-emails">
+        <div class="view-header">
+          <div>
+            <h2 class="view-title">Recruiter Cold Outreach Center</h2>
+            <p class="view-subtitle">Automated, rate-limited formal outreach directly to hiring managers and recruiters discovered during sweeps.</p>
+          </div>
+          <button class="btn btn-primary" id="btn-trigger-cold-batch">
+            <span class="btn-icon">⚡</span> Run Outreach Sweep
+          </button>
+        </div>
+
+        <div class="card glassmorphic">
+          <div class="card-header">
+            <h3 class="card-title">Sent & Pending Cold Emails</h3>
+          </div>
+          <div class="table-responsive">
+            <table class="data-table" id="table-cold-emails">
+              <thead>
+                <tr>
+                  <th>Recipient / HR</th>
+                  <th>Company & Role</th>
+                  <th>Subject</th>
+                  <th>Status</th>
+                  <th>Sent Timestamp</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="tbody-cold-emails">
+                <tr><td colspan="6" class="text-center py-4">No cold emails logged yet.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- 5. LIVE CONSOLE & AUTOMATION TERMINAL VIEW -->
+      <div class="view-panel" id="view-terminal">
+        <div class="view-header">
+          <div>
+            <h2 class="view-title">Engine Execution Console & Live Logs</h2>
+            <p class="view-subtitle">Live output streaming directly from active crawler and application tasks.</p>
+          </div>
+          <div class="terminal-actions">
+            <button class="btn btn-secondary btn-sm" id="btn-clear-terminal">Clear Console</button>
+          </div>
+        </div>
+
+        <div class="terminal-window glassmorphic" id="terminal-window">
+          <div class="terminal-header">
+            <div class="terminal-dots">
+              <span class="dot red"></span>
+              <span class="dot yellow"></span>
+              <span class="dot green"></span>
+            </div>
+            <div class="terminal-title">bash - naukri-applications.log (Live Stream)</div>
+          </div>
+          <div class="terminal-body" id="terminal-log-output">
+            <div class="log-line system">[SYSTEM] Connecting to autonomous job engine telemetry stream...</div>
+          </div>
+        </div>
+      </div>
+
+    </section>
+  </main>
+
+  <!-- MODALS -->
+
+  <!-- 1. JOB DETAILS & AI INSIGHTS MODAL -->
+  <div class="modal-backdrop" id="modal-job-details">
+    <div class="modal-box modal-lg glassmorphic">
+      <div class="modal-header">
+        <div>
+          <h3 class="modal-title" id="modal-job-title">Job Title</h3>
+          <p class="modal-subtitle" id="modal-job-company">Company • Portal</p>
+        </div>
+        <button class="modal-close" id="btn-close-job-modal">&times;</button>
+      </div>
+      <div class="modal-body" id="modal-job-body">
+        <!-- Tab buttons inside modal -->
+        <div class="modal-tabs">
+          <button class="modal-tab-btn active" data-tab="tab-insights">🧠 AI Insights & Skill Gaps</button>
+          <button class="modal-tab-btn" data-tab="tab-jd">📜 Full Job Description</button>
+          <button class="modal-tab-btn" data-tab="tab-pitch">✍️ Tailored Cover Pitch</button>
+          <button class="modal-tab-btn" data-tab="tab-resume">📄 Resume & Application Data</button>
+        </div>
+
+        <!-- Modal Tab 1: AI Insights -->
+        <div class="modal-tab-content active" id="tab-insights">
+          <div class="insight-score-banner">
+            <div class="score-dial">
+              <div class="dial-val" id="modal-score-val">90%</div>
+              <div class="dial-label">ATS Fit Score</div>
+            </div>
+            <div class="score-summary">
+              <h4 id="modal-score-headline">Strong Technical Fit</h4>
+              <p id="modal-score-reasoning">Evaluation reasoning text...</p>
+            </div>
+          </div>
+
+          <div class="insight-section">
+            <h4>✅ Matched Skills & Keywords</h4>
+            <div class="chip-container" id="modal-matched-skills">
+              <!-- Matched Chips -->
+            </div>
+          </div>
+
+          <div class="insight-section">
+            <h4>⚠️ Missing / Preferred Skills (Gap Analysis)</h4>
+            <div class="chip-container" id="modal-missing-skills">
+              <!-- Missing Chips -->
+            </div>
+          </div>
+
+          <div class="insight-section">
+            <h4>🎯 Interview Preparation & Skill Improvement Tips</h4>
+            <ul class="tips-list" id="modal-interview-tips">
+              <!-- Tips list items -->
+            </ul>
+          </div>
+        </div>
+
+        <!-- Modal Tab 2: Full JD -->
+        <div class="modal-tab-content" id="tab-jd">
+          <div class="jd-viewer-container" id="modal-full-jd-text">
+            No Job Description extracted.
+          </div>
+        </div>
+
+        <!-- Modal Tab 3: Pitch -->
+        <div class="modal-tab-content" id="tab-pitch">
+          <div class="pitch-viewer-container">
+            <h4>Tailored Application Summary & Pitch</h4>
+            <div class="pitch-box" id="modal-tailored-summary">
+              Summary text...
+            </div>
+          </div>
+        </div>
+
+        <!-- Modal Tab 4: Resume & Actions -->
+        <div class="modal-tab-content" id="tab-resume">
+          <div class="meta-details-grid">
+            <div class="meta-row"><strong>Resume Attached:</strong> <span id="modal-resume-name">-</span></div>
+            <div class="meta-row"><strong>Application Status:</strong> <span id="modal-status-badge" class="badge">APPLIED</span></div>
+            <div class="meta-row"><strong>Submitted At:</strong> <span id="modal-applied-at">-</span></div>
+            <div class="meta-row"><strong>Job URL:</strong> <a id="modal-job-url" href="#" target="_blank">Open Listing ↗</a></div>
+            <div class="meta-row"><strong>External Portal URL:</strong> <a id="modal-ext-url" href="#" target="_blank">-</a></div>
+          </div>
+          <div class="modal-actions-bar">
+            <a id="btn-modal-open-resume" href="#" target="_blank" class="btn btn-primary">
+              📄 Open Tailored PDF ↗
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. PDF RESUME PREVIEW MODAL -->
+  <div class="modal-backdrop" id="modal-pdf-viewer">
+    <div class="modal-box modal-xl glassmorphic">
+      <div class="modal-header">
+        <h3 class="modal-title" id="pdf-viewer-title">Tailored LaTeX Resume Preview</h3>
+        <div class="pdf-modal-actions">
+          <a id="btn-download-pdf" href="#" download class="btn btn-secondary btn-sm">⬇ Download PDF</a>
+          <button class="modal-close" id="btn-close-pdf-modal">&times;</button>
+        </div>
+      </div>
+      <div class="modal-body pdf-body">
+        <iframe id="pdf-preview-frame" src="about:blank"></iframe>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. RUN AUTOMATION MODAL -->
+  <div class="modal-backdrop" id="modal-run-automation">
+    <div class="modal-box modal-md glassmorphic">
+      <div class="modal-header">
+        <h3 class="modal-title">⚡ Trigger Job Automation Engine</h3>
+        <button class="modal-close" id="btn-close-run-modal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label">Target Automation Task:</label>
+          <select id="select-run-task" class="form-control">
+            <option value="apply-all">🌐 All 6 Portals (Naukri, LinkedIn, Indeed, Internshala, Wellfound, Foundit)</option>
+            <option value="naukri">Naukri.com Auto-Apply</option>
+            <option value="linkedin">LinkedIn Easy Apply & External</option>
+            <option value="internshala">Internshala Applications</option>
+            <option value="indeed">Indeed India Auto-Apply</option>
+            <option value="wellfound">Wellfound (AngelList)</option>
+            <option value="foundit">Foundit (Monster India)</option>
+            <option value="status-check">🔍 Application Status Scraper</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="checkbox-label">
+            <input type="checkbox" id="checkbox-dry-run" checked>
+            <span><strong>Dry Run Mode</strong> (Simulate and preview applications without live submission)</span>
+          </label>
+        </div>
+
+        <div class="modal-footer">
+          <button class="btn btn-secondary" id="btn-cancel-run">Cancel</button>
+          <button class="btn btn-primary" id="btn-confirm-run">🚀 Launch Task Now</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 4. COLD EMAIL COMPOSER MODAL -->
+  <div class="modal-backdrop" id="modal-cold-composer">
+    <div class="modal-box modal-lg glassmorphic">
+      <div class="modal-header">
+        <h3 class="modal-title">✉️ Send Recruiter Cold Outreach</h3>
+        <button class="modal-close" id="btn-close-composer-modal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label">Recruiter / HR Email Address:</label>
+          <input type="email" id="composer-recipient" class="form-control" placeholder="hr@company.com">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Email Subject:</label>
+          <input type="text" id="composer-subject" class="form-control" placeholder="Application for Embedded Software Engineer - Aditya Mittha">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Email Body:</label>
+          <textarea id="composer-body" class="form-control text-area-tall"></textarea>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" id="btn-cancel-composer">Cancel</button>
+          <button class="btn btn-primary" id="btn-send-composer-email">📨 Send Email with Attached Resume</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div class="toast-container" id="toast-container"></div>
+
+  <!-- Scripts -->
+  <script src="/js/components.js"></script>
+  <script src="/js/dashboard.js"></script>
+</body>
+</html>

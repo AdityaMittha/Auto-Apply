@@ -14,25 +14,25 @@ echo "=========================================="
 
 # Build the crontab entries
 CRON_ENTRIES="
-# === Auto-Apply Bot Cron Jobs ===
+# === Auto-Apply Bot Cron Jobs (All times in IST - Asia/Kolkata) ===
 
 # Profile refresh every hour (keeps Naukri session alive + bumps profile)
 0 * * * * cd $SCRIPT_DIR && ./run.sh refresh >> $SCRIPT_DIR/naukri-refresh.log 2>&1
 
-# Auto-apply across all 6 portals every 10 minutes
-*/10 * * * * cd $SCRIPT_DIR && ./run.sh apply:all >> $SCRIPT_DIR/naukri-applications.log 2>&1
+# Auto-apply across all 6 portals every 20 minutes between 9 AM and 10 PM IST
+*/20 9-22 * * * cd $SCRIPT_DIR && ./run.sh apply:all >> $SCRIPT_DIR/naukri-applications.log 2>&1
 
-# Check application statuses on portals at 6:00 PM IST (12:30 PM UTC)
-30 12 * * * cd $SCRIPT_DIR && ./run.sh status:check >> $SCRIPT_DIR/naukri-applications.log 2>&1
+# Check application statuses on portals at 6:00 PM IST
+00 18 * * * cd $SCRIPT_DIR && ./run.sh status:check >> $SCRIPT_DIR/naukri-applications.log 2>&1
 
-# Recruiter cold outreach at 6:30 PM IST (1:00 PM UTC)
-00 13 * * * cd $SCRIPT_DIR && ./run.sh cold:mail >> $SCRIPT_DIR/naukri-applications.log 2>&1
+# Recruiter cold outreach at 6:30 PM IST
+30 18 * * * cd $SCRIPT_DIR && ./run.sh cold:mail >> $SCRIPT_DIR/naukri-applications.log 2>&1
 
-# S3 Backup and sync at 7:30 PM IST (2:00 PM UTC)
-00 14 * * * cd $SCRIPT_DIR && ./run.sh s3:sync >> $SCRIPT_DIR/naukri-applications.log 2>&1
+# S3 Backup and sync at 7:30 PM IST
+30 19 * * * cd $SCRIPT_DIR && ./run.sh s3:sync >> $SCRIPT_DIR/naukri-applications.log 2>&1
 
-# Daily email report with resume attachments at 8:00 PM IST (2:30 PM UTC)
-30 14 * * * cd $SCRIPT_DIR && ./run.sh mail:report >> $SCRIPT_DIR/naukri-applications.log 2>&1
+# Daily email report digest at EXACTLY 8:00 PM IST
+00 20 * * * cd $SCRIPT_DIR && ./run.sh mail:report >> $SCRIPT_DIR/naukri-applications.log 2>&1
 "
 
 # Merge with existing crontab (preserve other jobs)

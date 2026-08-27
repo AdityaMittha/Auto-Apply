@@ -65,16 +65,17 @@ const naukriProfileUrl = g('NAUKRI_PROFILE_URL', 'https://www.naukri.com/mnjuser
 // AI Configuration
 const aiConfig = {
   enabled: g('AI_ENABLED', 'true').toLowerCase() === 'true',
-  model: g('GEMINI_MODEL', 'gemini-flash-latest'),
-  timeoutMs: parseInt(g('AI_TIMEOUT_MS', '10000'), 10),
+  model: g('GEMINI_MODEL', 'gemini-2.0-flash'),
+  timeoutMs: parseInt(g('AI_TIMEOUT_MS', '15000'), 10),
 };
 
 const autoApplyConfig = {
-  keywords: g('AUTO_APPLY_KEYWORDS', 'Embedded Systems Intern, Firmware Engineer, Python Developer, IoT Intern, Embedded C').split(',').map(s => s.trim()).filter(Boolean),
+  keywords: g('AUTO_APPLY_KEYWORDS', 'Embedded Software Engineer, Embedded Software Developer, Firmware Engineer, Embedded Systems Intern, Python Developer, IoT Intern, Embedded C, Data Analyst').split(',').map(s => s.trim()).filter(Boolean),
   locations: g('AUTO_APPLY_LOCATIONS', 'Pune, Remote, Solapur').split(',').map(s => s.trim()).filter(Boolean),
   experience: g('AUTO_APPLY_EXPERIENCE', '0'),
   maxPerRun: parseInt(g('AUTO_APPLY_MAX_PER_RUN', '10'), 10),
   minMatchScore: parseInt(g('AUTO_APPLY_MIN_MATCH_SCORE', '50'), 10),
+  domainMatchScore: parseInt(g('AUTO_APPLY_DOMAIN_MATCH_SCORE', '50'), 10),
   dryRun: g('DRY_RUN', 'false').toLowerCase() === 'true',
 };
 
@@ -94,5 +95,56 @@ function isLocationAllowed(locationStr) {
   return ALLOWED_LOCATIONS.some(allowed => loc.includes(allowed));
 }
 
-module.exports = { CV, CREDS, geminiKey, naukriProfileUrl, autoApplyConfig, aiConfig, isLocationAllowed, ALLOWED_LOCATIONS };
+/**
+ * Checks if a job belongs to target technical industry / department domains.
+ * @param {string} title
+ * @param {string} jdText
+ * @param {string} category
+ * @returns {boolean}
+ */
+function isIndustryMatched(title = '', jdText = '', category = '') {
+  const text = `${title} ${jdText} ${category}`.toLowerCase();
+  const targetDomains = [
+    // Embedded, Firmware, Hardware & Electronics
+    'embedded', 'firmware', 'microcontroller', 'mcu', 'esp32', 'arm', 'cortex', 'arduino', 'raspberry pi',
+    'freertos', 'rtos', 'uart', 'spi', 'i2c', 'can', 'can bus', 'mqtt', 'iot', 'hardware', 'pcb', 'electronics',
+    'e&tc', 'mechatronics', 'robotics', 'telecom', 'telecommunication', 'vlsi', 'verilog', 'fpga', 'sensor',
+    'device driver', 'bare-metal', 'stem', 'logic analyzer',
+    // Software, Python, Cloud, DevOps & Backend
+    'python', 'devops', 'backend', 'cloud', 'aws', 'docker', 'linux', 'software', 'developer', 'engineer',
+    'django', 'flask', 'fastapi', 'rest api', 'automation', 'data science', 'machine learning', 'ai', 'data structures',
+    // Data Analytics, Business Intelligence & SQL
+    'data analyst', 'data analytics', 'data science', 'business analyst', 'business intelligence', 'bi analyst',
+    'sql', 'pandas', 'numpy', 'tableau', 'power bi', 'powerbi', 'eda', 'matplotlib', 'seaborn', 'statistics',
+    'etl', 'data pipeline', 'data wrangling', 'scikit-learn'
+  ];
+  return targetDomains.some(kw => text.includes(kw));
+}
+
+/**
+ * Computes dynamic minimum match score: 50% if industry/department is matched.
+ * @param {string} title
+ * @param {string} jdText
+ * @param {string} category
+ * @returns {number}
+ */
+function getEffectiveMinScore(title = '', jdText = '', category = '') {
+  if (isIndustryMatched(title, jdText, category)) {
+    return autoApplyConfig.domainMatchScore || 50;
+  }
+  return autoApplyConfig.minMatchScore || 50;
+}
+
+module.exports = {
+  CV,
+  CREDS,
+  geminiKey,
+  naukriProfileUrl,
+  autoApplyConfig,
+  aiConfig,
+  isLocationAllowed,
+  isIndustryMatched,
+  getEffectiveMinScore,
+  ALLOWED_LOCATIONS
+};
 

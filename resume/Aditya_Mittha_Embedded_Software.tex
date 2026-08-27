@@ -1,0 +1,141 @@
+%-------------------------
+% Resume in LaTeX - ATS Optimized for Embedded Software Engineer / Developer
+% Author: Aditya Mittha
+%-------------------------
+
+\documentclass[letterpaper,10.5pt]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{titlesec}
+\usepackage[usenames,dvipsnames]{color}
+\usepackage{enumitem}
+\usepackage[hidelinks]{hyperref}
+\usepackage{geometry}
+
+% custom font: helvetica-style
+\usepackage{tgheros}
+\renewcommand*\familydefault{\sfdefault}
+
+\geometry{left=0.5in, right=0.5in, top=0.35in, bottom=0.35in}
+
+\pagestyle{empty}
+
+\urlstyle{same}
+\raggedbottom
+\raggedright
+\setlength{\tabcolsep}{0in}
+\setlength{\parindent}{0pt}
+
+% Section formatting — clean, ATS-parseable
+\titleformat{\section}{
+  \vspace{-10pt}\bfseries\large\scshape\raggedright
+}{}{0em}{}[\color{black}\titlerule\vspace{-6pt}]
+
+% Bullet list settings
+\newcommand{\resumeItemListStart}{\begin{itemize}[leftmargin=0.18in, topsep=1.5pt, parsep=0pt, itemsep=1pt]}
+\newcommand{\resumeItemListEnd}{\end{itemize}\vspace{-5pt}}
+\newcommand{\resumeItem}[1]{\item\small{#1}}
+
+%-------------------------------------------
+\begin{document}
+
+%----------HEADING----------
+\begin{center}
+  {\LARGE \textbf{Aditya Mittha}} \\[3pt]
+  \small
+  +91-8010542551 \enspace $|$ \enspace
+  \href{mailto:adityamittha09@gmail.com}{adityamittha09@gmail.com} \enspace $|$ \enspace
+  \href{https://www.linkedin.com/in/adityamittha}{linkedin.com/in/adityamittha} \enspace $|$ \enspace
+  \href{https://github.com/AdityaMittha}{github.com/AdityaMittha} \enspace $|$ \enspace
+  Solapur, India
+\end{center}
+
+\vspace{-15pt}
+
+%-----------SUMMARY-----------
+\section{Summary}
+\small
+Final-year Electronics and Telecommunication engineering student (9.27 CGPA) with proven hands-on expertise in Embedded Software Engineering, Firmware Architecture, and Low-Level Driver Development. Experienced in writing modular Embedded C/C++ for ARM Cortex-M and ESP32 microcontrollers, designing FreeRTOS multi-threaded firmware, and implementing communication protocol stacks (UART, SPI, I2C, CAN, MQTT). Skilled in interrupt service routines (ISR), circular ring buffers, hardware abstraction layers (HAL), and debugging with logic analyzers and JTAG/SWD.
+
+\vspace{-4pt}
+
+%-----------SKILLS-----------
+\section{Skills}
+\small
+\begin{itemize}[leftmargin=0.18in, label={}, topsep=0pt, parsep=1pt, itemsep=1pt]
+  \item \textbf{Languages \& Core:} Embedded C (C99/C11), C++, Python (Automation/Testing), Bash Scripting, MISRA C Concepts
+  \item \textbf{RTOS \& Firmware:} FreeRTOS (Tasks, Queues, Semaphores, Mutexes), Bare-Metal Systems, State Machines (FSM), HAL/BSP
+  \item \textbf{Protocols \& Interfaces:} UART, SPI, I2C, CAN Bus (Arbitration/Frames), MQTT (QoS), GPIO, ADC, PWM, Timers
+  \item \textbf{Hardware \& Debugging:} ESP32 (ESP-IDF), ARM Cortex-M (STM32), Raspberry Pi, Logic Analyzer, GDB, JTAG/SWD
+  \item \textbf{DevOps \& Tools:} Git, GitHub Actions, Linux (Ubuntu/WSL, Shell, Make/CMake), Docker, AWS IoT Core
+  \item \textbf{Soft Skills:} Analytical Debugging, Systems Architecture, Clean Code Practices, Cross-Functional Collaboration
+\end{itemize}
+
+\vspace{-8pt}
+
+%-----------EDUCATION-----------
+\section{Education}
+\textbf{Bachelor's Degree in Electronics and Telecommunication} \hfill 2027 \\
+\textit{Walchand Institute Of Technology} \hfill CGPA: 9.27
+
+\vspace{1pt}
+
+\textbf{Higher Schooling} \hfill 2023 \\
+\textit{D.H.B Soni College, Solapur} \hfill Percentage: 83\%
+
+\vspace{-3pt}
+
+%-----------WORK EXPERIENCE-----------
+\section{Work Experience}
+\textbf{Embedded Software Developer Intern} \hfill May 2025 -- June 2025 \\
+\textit{Codec Technologies India} \hfill \textit{Remote}
+\resumeItemListStart
+  \resumeItem{Authored modular, driver-level Embedded C firmware for UART and I\textsuperscript{2}C communication peripherals, integrating circular ring buffers that eliminated packet loss.}
+  \resumeItem{Programmed Hardware Abstraction Layer (HAL) routines and Interrupt Service Routines (ISRs) on microcontrollers for synchronized, low-latency sensor data acquisition.}
+  \resumeItem{Debugged bus timing bottlenecks and arbitration conflicts using logic analyzers and serial debuggers, resolving 10+ firmware defects prior to deployment.}
+  \resumeItem{Maintained structured code reviews, version control, and development documentation across active Git branches in a Linux environment.}
+\resumeItemListEnd
+\small{\textbf{Technologies:} Embedded C, UART, I\textsuperscript{2}C, ISRs, HAL, Logic Analyzer, Git, Linux}
+
+\vspace{-3pt}
+
+%-----------PROJECTS-----------
+\section{Projects}
+
+\textbf{\href{https://github.com/AdityaMittha/AQUANOVA}{AQUANOVA -- ESP32 Real-Time Firmware \& Telemetry Engine}} \hfill 2026
+\resumeItemListStart
+  \resumeItem{Architected multi-threaded FreeRTOS firmware on ESP32 managing non-blocking ADC/GPIO polling, queue-based IPC, and asynchronous MQTT telemetry dispatch.}
+  \resumeItem{Designed resilient peripheral drivers with hardware watchdog timer monitoring and automatic reconnect state machines for robust network failover.}
+  \resumeItem{Engineered circular ring buffers handling high-frequency sensor streams with zero buffer overflow during real-time pressure spikes.}
+\resumeItemListEnd
+\small{\textbf{Role:} Embedded Software \& Firmware Lead (3-person team)} \\
+\small{\textbf{Tech Stack:} Embedded C, ESP32, FreeRTOS, MQTT, I\textsuperscript{2}C, ADC, Watchdog Timer, Python, Git}
+
+\vspace{4pt}
+
+\textbf{\href{https://github.com/AdityaMittha/LabPulse}{LabPulse -- Embedded Telemetry Agent \& Interfacing System}} \hfill 2026
+\resumeItemListStart
+  \resumeItem{Developed a modular telemetry agent service in Python to monitor peripheral hardware status, session states, and serial data streams with sub-1\% CPU overhead.}
+  \resumeItem{Implemented secure REST API communication with SHA-256 validation to transmit device diagnostics to AWS serverless backends (Lambda, DynamoDB).}
+  \resumeItem{Containerized background services with Docker and set up automated CI/CD pipelines in GitHub Actions.}
+\resumeItemListEnd
+\small{\textbf{Role:} Backend Lead \& System Software Architecture} \\
+\small{\textbf{Tech Stack:} Python, Embedded Linux, REST APIs, AWS Lambda, DynamoDB, Docker, GitHub Actions}
+
+%-------------------------------------------
+\section{Rewards \& Achievements}
+\resumeItemListStart
+  \resumeItem{2x Winner, National Electronic Quiz Competition (Quizotronics)}
+  \resumeItem{Runner-up, State-level chess championship}
+  \resumeItem{Participated in 4\textsuperscript{+} Hackathons and Embedded Hardware Competitions}
+\resumeItemListEnd
+
+\vspace{-5pt}
+%-----------------
+\section{Languages}
+\small
+English \enspace $|$ \enspace Hindi \enspace $|$ \enspace Marathi \enspace $|$ \enspace Kannada
+
+%-------------------------------------------  
+\end{document}

@@ -8,9 +8,10 @@
 const { chromium } = require('playwright-core');
 const path = require('path');
 const fs = require('fs');
-const { autoApplyConfig, CV, geminiKey, aiConfig, isLocationAllowed } = require('./config');
+const { autoApplyConfig, CV, geminiKey, aiConfig, isLocationAllowed, getEffectiveMinScore } = require('./config');
 const { analyzeJob, answerQuestion } = require('./tailor-engine');
 const { generateCoverLetter } = require('./gemini-ai');
+const { applyToCareerPage } = require('./career-page-engine');
 
 const PROFILE_DIR = path.join(__dirname, '.internshala-chrome-profile');
 const LOG_FILE = path.join(__dirname, 'naukri-applications.log');
@@ -55,7 +56,8 @@ const INTERNSHALA_SLUGS = [
 
   const IS_LINUX = process.platform === 'linux';
   const appliedDb = loadAppliedJobs();
-  const appliedUrls = new Set(appliedDb.applied.map(a => a.jobId || a.url));
+  const actualApplied = appliedDb.applied.filter(a => a.status === 'APPLIED' || a.status === 'EXTERNAL_REDIRECT');
+  const appliedUrls = new Set(actualApplied.map(a => a.jobId || a.url).filter(Boolean));
 
   const ctx = await chromium.launchPersistentContext(PROFILE_DIR, {
     channel: IS_LINUX ? 'chromium' : 'chrome',
@@ -71,22 +73,88 @@ const INTERNSHALA_SLUGS = [
   const page = ctx.pages()[0] || (await ctx.newPage());
   let processedCount = 0;
 
+  const IS_LOGIN_MODE = process.argv.includes('login');
+
   try {
     // 1. Verify Login State
     await page.goto('https://internshala.com/', { waitUntil: 'domcontentloaded', timeout: 45000 });
     await page.waitForTimeout(2000);
 
-    const isLoggedIn = await page.evaluate(() => {
+    let isLoggedIn = await page.evaluate(() => {
       return Boolean(document.querySelector('.profile_container, .user_profile, #profile_dropdown, a[href*="/student/dashboard"]'));
     });
 
-    if (!isLoggedIn) {
-      log(`⚠️ Not logged into Internshala!`);
-      if (VISIBLE_MODE) {
-        log(`👉 Please log in to your Internshala account in the browser window. Waiting 60s...`);
-        await page.waitForTimeout(60000);
+    if (!isLoggedIn || IS_LOGIN_MODE) {
+      log(`🔑 Launching Internshala Google sign-in flow...`);
+      await page.goto('https://internshala.com/login/user', { waitUntil: 'domcontentloaded', timeout: 45000 });
+      await page.waitForTimeout(2000);
+
+      // Click "Sign in with Google" button
+      const googleBtn = page.locator('#google_login, a.google_btn, .google-login, button:has-text("Sign in with Google"), a:has-text("Sign in with Google"), [href*="google"]').first();
+      if (await googleBtn.isVisible().catch(() => false)) {
+        await googleBtn.click();
+        log(`   Clicked "Sign in with Google"...`);
+
+        // Find Google popup or redirected tab
+        let g = null;
+        for (let i = 0; i < 20 && !g; i++) {
+          await page.waitForTimeout(1000);
+          g = ctx.pages().find((p) => /accounts\.google\./.test(p.url())) || null;
+        }
+
+        if (g) {
+          await g.waitForLoadState('domcontentloaded').catch(() => {});
+          const knownAccount = g.locator(`[data-email="${CREDS.email}"]`).first();
+          if (await knownAccount.isVisible().catch(() => false)) {
+            log(`   Selecting known Google account: ${CREDS.email}`);
+            await knownAccount.click();
+          } else {
+            const emailBox = g.locator('input#identifierId, input[type="email"]').first();
+            if (await emailBox.isVisible().catch(() => false)) {
+              log(`   Filling email: ${CREDS.email}`);
+              await emailBox.fill(CREDS.email);
+              await g.locator('#identifierNext, button:has-text("Next")').first().click();
+              await g.waitForTimeout(2000);
+              const passBox = g.locator('input[type="password"]').first();
+              if (await passBox.isVisible().catch(() => false)) {
+                log(`   Filling password...`);
+                await passBox.fill(CREDS.password);
+                await g.locator('#passwordNext, button:has-text("Next")').first().click();
+              }
+            }
+          }
+        }
+      }
+
+      // Wait for login completion / dashboard redirect (up to 90 seconds for 2FA if needed)
+      log(`   ⏳ Waiting for dashboard confirmation...`);
+      const deadline = Date.now() + 90000;
+      while (Date.now() < deadline) {
+        const pages = ctx.pages();
+        const authed = pages.find(p => /internshala\.com\/(student\/dashboard|internships)/i.test(p.url()));
+        if (authed) {
+          isLoggedIn = true;
+          break;
+        }
+        isLoggedIn = await page.evaluate(() => {
+          return Boolean(document.querySelector('.profile_container, .user_profile, #profile_dropdown, a[href*="/student/dashboard"]'));
+        }).catch(() => false);
+        if (isLoggedIn) break;
+        await page.waitForTimeout(2000);
+      }
+
+      if (isLoggedIn) {
+        log(`🎉 Successfully logged into Internshala! Session saved in .internshala-chrome-profile.`);
+        if (IS_LOGIN_MODE) {
+          log(`✅ Login complete. You can now run "npm run apply:internshala" or "npm run apply:all".`);
+          return;
+        }
       } else {
-        log(`💡 Run "npm run login:internshala" once locally to save your login session.`);
+        log(`⚠️ Google login did not complete within the timeout. Please complete sign-in in the open browser.`);
+        if (IS_LOGIN_MODE) {
+          await page.waitForTimeout(30000);
+          return;
+        }
       }
     } else {
       log(`✅ Authenticated on Internshala.`);
@@ -154,17 +222,18 @@ const INTERNSHALA_SLUGS = [
           }
 
           // Run Hybrid Tailoring Engine & compile custom LaTeX PDF
-          const analysis = await analyzeJob(item.title, fullJd, [], {
+            const analysis = await analyzeJob(item.title, fullJd, [], {
             cv: CV,
             geminiKey,
             aiEnabled: aiConfig.enabled,
             jobId: item.url || `${item.company}_${item.title}`,
           });
 
-          log(`   Category: [${analysis.category.toUpperCase()}] | Score: ${analysis.matchScore}% | Resume: ${analysis.resumeName}`);
+          const effectiveMin = getEffectiveMinScore(item.title, fullJd, analysis.category);
+          log(`   Category: [${analysis.category.toUpperCase()}] | Score: ${analysis.matchScore}% (Min: ${effectiveMin}%) | Resume: ${analysis.resumeName}`);
 
-          if (analysis.matchScore < autoApplyConfig.minMatchScore) {
-            log(`   ⏭️ Skipped: Match score (${analysis.matchScore}%) below threshold.`);
+          if (analysis.matchScore < effectiveMin) {
+            log(`   ⏭️ Skipped: Match score (${analysis.matchScore}%) below threshold (${effectiveMin}%).`);
             if (detailPage) await detailPage.close().catch(() => {});
             continue;
           }
@@ -191,6 +260,7 @@ const INTERNSHALA_SLUGS = [
                 company: item.company,
                 portal: 'Internshala',
                 url: item.url,
+                location: item.location,
                 category: analysis.category,
                 resumeUsed: analysis.resumeName,
                 tailoredResumePath: analysis.tailoredResumePath,
@@ -198,6 +268,13 @@ const INTERNSHALA_SLUGS = [
                 s3Key: analysis.s3Key,
                 isTailored: analysis.isTailored,
                 matchScore: analysis.matchScore,
+                matchedSkills: analysis.matchedSkills || [],
+                missingSkills: analysis.missingSkills || [],
+                aiReasoning: analysis.reasoning || '',
+                interviewTips: analysis.interviewTips || [],
+                highlightedSkills: analysis.highlightedSkills || [],
+                tailoredSummary: analysis.tailoredSummary || '',
+                jobDescription: (fullJd || '').slice(0, 3000),
                 appliedAt: new Date().toISOString(),
                 status: 'PREVIEW_DRY_RUN',
               });
@@ -226,10 +303,17 @@ const INTERNSHALA_SLUGS = [
                 apiKey: geminiKey,
               }) || `I am a final-year Electronics and Telecommunication Engineering student at Walchand Institute of Technology (9.27 CGPA) with hands-on experience in Embedded C, FreeRTOS, ESP32, and Python systems. I am eager to contribute effectively to ${item.company} and am available immediately in Pune / Remote.`;
 
-              // 2. Fill Cover Letter Textarea
+              // 2. Fill Cover Letter Textarea / Quill Editor
               const coverTextarea = detailPage.locator('#cover_letter, textarea[name="cover_letter"], textarea[placeholder*="cover letter"], div.ql-editor').first();
               if (await coverTextarea.isVisible().catch(() => false)) {
-                await coverTextarea.fill(coverLetterText);
+                try {
+                  await coverTextarea.fill(coverLetterText);
+                } catch {
+                  await coverTextarea.evaluate((el, text) => {
+                    if (el.tagName === 'TEXTAREA' || el.tagName === 'INPUT') el.value = text;
+                    else el.innerText = text;
+                  }, coverLetterText);
+                }
                 log(`   ✅ Cover letter filled (${coverLetterText.slice(0, 50)}...)`);
               }
 
@@ -257,31 +341,77 @@ const INTERNSHALA_SLUGS = [
 
               // 5. Submit Application
               const submitBtn = detailPage.locator('input#submit, button#submit, button:has-text("Submit application"), button:has-text("Submit")').first();
+              let isSubmitted = false;
+              let failureReason = null;
+              let applyStatus = 'APPLIED';
+              let portalName = 'Internshala';
+
               if (await submitBtn.isVisible().catch(() => false)) {
                 await submitBtn.click();
                 await detailPage.waitForTimeout(4000);
-
+                isSubmitted = true;
                 log(`   🎉 Application submitted successfully on Internshala!`);
+              } else {
+                // Check if external link exists on Internshala
+                const extLink = detailPage.locator('a[href*="http"]:has-text("Apply"), a.btn:has-text("Apply")').first();
+                if (await extLink.isVisible().catch(() => false)) {
+                  log(`   ℹ️ Internshala external link detected. Triggering AI Career Page Engine...`);
+                  try {
+                    const popupPromise = ctx.waitForEvent('page', { timeout: 10000 }).catch(() => null);
+                    await extLink.click();
+                    let extPage = await popupPromise;
+                    if (!extPage) extPage = detailPage;
 
-                appliedDb.applied.push({
-                  jobId: item.url,
-                  title: item.title,
-                  company: item.company,
-                  portal: 'Internshala',
-                  url: item.url,
-                  category: analysis.category,
-                  resumeUsed: analysis.resumeName,
-                  tailoredResumePath: analysis.tailoredResumePath,
-                  s3Url: analysis.s3Url,
-                  s3Key: analysis.s3Key,
-                  isTailored: analysis.isTailored,
-                  matchScore: analysis.matchScore,
-                  appliedAt: new Date().toISOString(),
-                  status: 'APPLIED',
-                });
+                    const extRes = await applyToCareerPage(extPage, item, analysis, {
+                      cv: CV,
+                      geminiKey,
+                      dryRun: IS_DRY_RUN,
+                      log,
+                    });
+                    applyStatus = extRes.status || 'APPLIED';
+                    portalName = `Internshala (${extRes.atsProvider || 'Company Site'})`;
+                    failureReason = extRes.reason || null;
+                    if (applyStatus === 'APPLIED') isSubmitted = true;
+                    if (extPage && extPage !== detailPage) await extPage.close().catch(() => {});
+                  } catch (extErr) {
+                    failureReason = extErr.message;
+                    applyStatus = 'EXTERNAL_MANUAL_REQUIRED';
+                  }
+                } else {
+                  failureReason = 'Submit button not found';
+                  applyStatus = 'EXTERNAL_MANUAL_REQUIRED';
+                }
+              }
 
-                appliedUrls.add(item.url);
-                saveAppliedJobs(appliedDb);
+              appliedDb.applied.push({
+                jobId: item.url,
+                title: item.title,
+                company: item.company,
+                portal: portalName,
+                url: item.url,
+                location: item.location,
+                category: analysis.category,
+                resumeUsed: analysis.resumeName,
+                tailoredResumePath: analysis.tailoredResumePath,
+                s3Url: analysis.s3Url,
+                s3Key: analysis.s3Key,
+                isTailored: analysis.isTailored,
+                matchScore: analysis.matchScore,
+                matchedSkills: analysis.matchedSkills || [],
+                missingSkills: analysis.missingSkills || [],
+                aiReasoning: analysis.reasoning || '',
+                interviewTips: analysis.interviewTips || [],
+                highlightedSkills: analysis.highlightedSkills || [],
+                tailoredSummary: analysis.tailoredSummary || '',
+                jobDescription: (fullJd || '').slice(0, 3000),
+                appliedAt: new Date().toISOString(),
+                status: applyStatus,
+                reason: failureReason,
+              });
+
+              appliedUrls.add(item.url);
+              saveAppliedJobs(appliedDb);
+              if (applyStatus === 'APPLIED' || applyStatus === 'PREVIEW_DRY_RUN') {
                 processedCount++;
               }
             } else {

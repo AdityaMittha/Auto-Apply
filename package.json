@@ -11,6 +11,8 @@
     "login:internshala": "node internshala-apply.js login visible",
     "login:linkedin": "node linkedin-apply.js login visible",
     "login:indeed": "node indeed-apply.js login visible",
+    "login:wellfound": "node wellfound-apply.js login visible",
+    "login:foundit": "node foundit-apply.js login visible",
     "apply": "node naukri-auto-apply.js",
     "apply:dry": "node naukri-auto-apply.js dry",
     "apply:visible": "node naukri-auto-apply.js visible",
@@ -23,6 +25,7 @@
     "apply:all": "node apply-all.js",
     "apply:all:dry": "node apply-all.js dry",
     "apply:all:visible": "node apply-all.js visible",
+    "apply:clean": "node -e \"const fs=require('fs'); fs.writeFileSync('./applied-jobs.json', JSON.stringify({applied:[], lastUpdated: new Date().toISOString()}, null, 2)); console.log('Cleaned applied-jobs.json');\"",
     "apply:history": "node -e \"const f=require('./applied-jobs.json'); console.table(f.applied.map(a=>({Title: (a.title||'').slice(0,28), Company: (a.company||'').slice(0,18), Portal: a.portal||'Naukri', Category: a.category, Resume: (a.resumeUsed||'').slice(0,22), Score: (a.matchScore||50)+'%', Status: a.status})))\"",
     "mail:report": "node mailer.js",
     "mail:preview": "node mailer.js preview",
@@ -36,7 +39,10 @@
     "status:check:visible": "node status-tracker.js visible",
     "cold:mail": "node cold-mailer.js",
     "cold:mail:dry": "node cold-mailer.js dry",
-    "s3:sync": "node -e \"require('./s3-storage').syncTailoredResumes()\""
+    "s3:sync": "node -e \"require('./s3-storage').syncTailoredResumes()\"",
+    "sync:ec2": "powershell -ExecutionPolicy Bypass -File ./transfer-data.ps1",
+    "dashboard": "node dashboard-server.js",
+    "start": "node dashboard-server.js"
   },
   "author": "Ankit Baghel",
   "license": "ISC",

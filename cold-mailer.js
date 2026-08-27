@@ -201,7 +201,9 @@ async function sendColdEmails() {
       job.coldEmailed = true;
       job.coldEmailedAt = new Date().toISOString();
       job.coldEmailSubject = emailContent.subject;
-      job.status = job.status ? `${job.status} (COLD_EMAILED)` : 'COLD_EMAILED';
+      job.coldEmailBody = emailContent.body;
+      job.coldEmailRecipient = job.recruiterEmail;
+      job.status = job.status && !job.status.includes('COLD_EMAILED') ? `${job.status}` : (job.status || 'COLD_EMAILED');
       sentCount++;
       saveAppliedJobs(db);
 
@@ -215,11 +217,69 @@ async function sendColdEmails() {
   log(`\n🎉 Cold Email run finished! Sent ${sentCount} outreach email(s).`);
 }
 
+/**
+ * Sends a single on-demand cold outreach email from the Web Dashboard.
+ */
+async function sendSingleColdEmail(jobId, customOptions = {}) {
+  const db = loadAppliedJobs();
+  const job = db.applied.find(j => j.jobId === jobId || j.url === jobId);
+  if (!job) throw new Error('Job application not found in database.');
+
+  const recipient = customOptions.recipient || job.recruiterEmail;
+  if (!recipient || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(recipient)) {
+    throw new Error('Valid recruiter email address is required.');
+  }
+
+  const generated = await generateColdEmailContent(job);
+  const subject = customOptions.subject || generated.subject;
+  const body = customOptions.body || generated.body;
+  const resumePath = getResumePathForJob(job);
+
+  if (!SMTP_PASS) {
+    throw new Error('SMTP_PASS is not configured in .env');
+  }
+
+  const transporter = nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+      user: SMTP_USER,
+      pass: SMTP_PASS,
+    },
+  });
+
+  const mailOptions = {
+    from: `"Aditya Mittha" <${SMTP_USER}>`,
+    to: recipient,
+    subject,
+    text: body,
+    attachments: resumePath ? [
+      {
+        filename: `Aditya_Mittha_Resume_${(job.category || 'Embedded')}.pdf`,
+        path: resumePath,
+        contentType: 'application/pdf',
+      }
+    ] : [],
+  };
+
+  const info = await transporter.sendMail(mailOptions);
+  job.recruiterEmail = recipient;
+  job.coldEmailed = true;
+  job.coldEmailedAt = new Date().toISOString();
+  job.coldEmailSubject = subject;
+  job.coldEmailBody = body;
+  job.coldEmailRecipient = recipient;
+  saveAppliedJobs(db);
+
+  return { success: true, messageId: info.messageId, recipient, subject };
+}
+
 if (require.main === module) {
   sendColdEmails();
 }
 
 module.exports = {
   sendColdEmails,
+  sendSingleColdEmail,
   generateColdEmailContent,
+  getResumePathForJob,
 };

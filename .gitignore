@@ -25,3 +25,5 @@ node_modules/
 # tailored resumes cache
 resume/tailored/
 
+# Agentic skills junction & ide data
+.agents/

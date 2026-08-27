@@ -17,15 +17,19 @@ const RESUME_DIR = path.join(__dirname, 'resume');
 const TAILORED_DIR = path.join(RESUME_DIR, 'tailored');
 
 const BASE_TEX_FILES = {
+  embedded_software: path.join(RESUME_DIR, 'Aditya_Mittha_Embedded_Software.tex'),
   embedded: path.join(RESUME_DIR, 'Aditya_Mittha_Embedded.tex'),
   python_devops: path.join(RESUME_DIR, 'Aditya_Mittha.tex'),
-  default: path.join(RESUME_DIR, 'Aditya_Mittha_Embedded.tex'),
+  data_analytics: path.join(RESUME_DIR, 'Aditya_Mittha_Data_Analytics.tex'),
+  default: path.join(RESUME_DIR, 'Aditya_Mittha_Embedded_Software.tex'),
 };
 
 const STATIC_PDFS = {
+  embedded_software: path.join(RESUME_DIR, 'Mittha_Aditya_Embedded_Software.pdf'),
   embedded: path.join(RESUME_DIR, 'Mittha_Aditya_Embedded.pdf'),
   python_devops: path.join(RESUME_DIR, 'Mittha_Aditya.pdf'),
-  default: path.join(RESUME_DIR, 'Mittha_Aditya_Embedded.pdf'),
+  data_analytics: path.join(RESUME_DIR, 'Mittha_Aditya_Data_Analytics.pdf'),
+  default: path.join(RESUME_DIR, 'Mittha_Aditya_Embedded_Software.pdf'),
 };
 
 // Ensure tailored directory exists
@@ -100,7 +104,7 @@ async function tailorAndCompileResume({
   cv = CV,
   apiKey = geminiKey,
 }) {
-  const normCategory = category === 'python_devops' ? 'python_devops' : 'embedded';
+  const normCategory = category === 'embedded_software' ? 'embedded_software' : (category === 'data_analytics' ? 'data_analytics' : (category === 'python_devops' ? 'python_devops' : 'embedded'));
   const baseTexPath = BASE_TEX_FILES[normCategory] || BASE_TEX_FILES.default;
   const staticPdf = STATIC_PDFS[normCategory] || STATIC_PDFS.default;
 

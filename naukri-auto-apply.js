@@ -6,8 +6,9 @@
 const { chromium } = require('playwright-core');
 const path = require('path');
 const fs = require('fs');
-const { CV, CREDS, geminiKey, autoApplyConfig, aiConfig, isLocationAllowed } = require('./config');
+const { CV, CREDS, geminiKey, autoApplyConfig, aiConfig, isLocationAllowed, getEffectiveMinScore } = require('./config');
 const { analyzeJob, answerQuestion } = require('./tailor-engine');
+const { applyToCareerPage } = require('./career-page-engine');
 
 const PROFILE_DIR = path.join(__dirname, '.naukri-chrome-profile');
 const APPLIED_FILE = path.join(__dirname, 'applied-jobs.json');
@@ -51,8 +52,10 @@ function sleep(ms) {
   log(`=======================================================`);
 
   const appliedDb = loadAppliedJobs();
-  const appliedUrls = new Set(appliedDb.applied.map(a => a.url));
-  const appliedJobIds = new Set(appliedDb.applied.map(a => a.jobId));
+  // Only filter out actual APPLIED or EXTERNAL_REDIRECT jobs so dry-run tests never block live runs
+  const actualApplied = appliedDb.applied.filter(a => a.status === 'APPLIED' || a.status === 'EXTERNAL_REDIRECT');
+  const appliedUrls = new Set(actualApplied.map(a => a.url).filter(Boolean));
+  const appliedJobIds = new Set(actualApplied.map(a => a.jobId).filter(Boolean));
 
   const IS_LINUX = process.platform === 'linux';
   const ctx = await chromium.launchPersistentContext(PROFILE_DIR, {
@@ -66,14 +69,68 @@ function sleep(ms) {
     ],
   });
 
-  const page = ctx.pages()[0] || (await ctx.newPage());
+  let page = ctx.pages()[0] || (await ctx.newPage());
   let totalAppliedThisRun = 0;
   let totalEvaluated = 0;
 
   try {
-    // Navigate to homepage first to confirm login session
+    // 1. Verify Authentication State on Naukri
+    log(`🔐 Verifying Naukri login session...`);
     await page.goto('https://www.naukri.com/mnjuser/profile', { waitUntil: 'domcontentloaded', timeout: 45000 });
     await page.waitForTimeout(2000);
+
+    const onProfile = (url) => url && url.pathname && url.pathname.startsWith('/mnjuser');
+    let currentUrl = new URL(page.url());
+
+    if (!onProfile(currentUrl)) {
+      log(`⚠️ Not logged into Naukri! Attempting automated sign-in with Google...`);
+      try {
+        await page.goto('https://www.naukri.com/nlogin/login?URL=https://www.naukri.com/mnjuser/profile', {
+          waitUntil: 'domcontentloaded', timeout: 60000,
+        });
+        const googleBtn = page.locator('.socialbtn.google, [class*="socialbtn"][class*="google"]').first();
+        if (await googleBtn.isVisible().catch(() => false)) {
+          await googleBtn.click();
+          let g = null;
+          for (let i = 0; i < 20 && !g; i++) {
+            await page.waitForTimeout(1000);
+            g = ctx.pages().find((p) => /accounts\.google\./.test(p.url())) || null;
+          }
+          if (g) {
+            await g.waitForLoadState('domcontentloaded');
+            const knownAccount = g.locator(`[data-email="${CREDS.email}"]`).first();
+            if (await knownAccount.isVisible().catch(() => false)) {
+              await knownAccount.click();
+            } else {
+              const emailBox = g.locator('input#identifierId, input[type="email"]').first();
+              if (await emailBox.isVisible().catch(() => false)) {
+                await emailBox.fill(CREDS.email);
+                await g.locator('#identifierNext, button:has-text("Next")').first().click();
+                await page.waitForTimeout(2000);
+                const passBox = g.locator('input[type="password"]').first();
+                if (await passBox.isVisible().catch(() => false)) {
+                  await passBox.fill(CREDS.password);
+                  await g.locator('#passwordNext, button:has-text("Next")').first().click();
+                }
+              }
+            }
+            await page.waitForTimeout(4000);
+          }
+        }
+      } catch (authErr) {
+        log(`Warning during automated login: ${authErr.message}`);
+      }
+
+      await page.goto('https://www.naukri.com/mnjuser/profile', { waitUntil: 'domcontentloaded', timeout: 45000 }).catch(() => {});
+      currentUrl = new URL(page.url());
+      if (onProfile(currentUrl)) {
+        log(`✅ Successfully authenticated as ${CREDS.email}`);
+      } else {
+        log(`⚠️ Could not confirm active Naukri session. If applications fail, run "npm run login:naukri" once to authenticate.`);
+      }
+    } else {
+      log(`✅ Authenticated on Naukri.`);
+    }
 
     for (const keyword of autoApplyConfig.keywords) {
       if (totalAppliedThisRun >= autoApplyConfig.maxPerRun) break;
@@ -169,37 +226,136 @@ function sleep(ms) {
                 log(`   💡 AI Reasoning: ${analysis.reasoning}`);
               }
             }
-            log(`   Selected Resume: ${analysis.resumeName}`);
+            const effectiveMin = getEffectiveMinScore(job.title, fullJd, analysis.category);
+            log(`   Selected Resume: ${analysis.resumeName} | Min Threshold: ${effectiveMin}%`);
 
-            if (analysis.matchScore < autoApplyConfig.minMatchScore) {
-              log(`   ⏭️ Skipped: Match score (${analysis.matchScore}%) below threshold.`);
+            if (analysis.matchScore < effectiveMin) {
+              log(`   ⏭️ Skipped: Match score (${analysis.matchScore}%) below threshold (${effectiveMin}%).`);
               if (jobPage) await jobPage.close().catch(() => {});
               continue;
             }
 
             // Check Application Type (Direct Apply vs External Site)
             if (jobPage) {
-              const isExternal = await jobPage.evaluate(() => {
+              const applyMeta = await jobPage.evaluate(() => {
+                let externalUrl = null;
+                let isExternal = false;
+
+                // 1. Inspect React Fiber tree for jobDetails (companyApplyUrl / applyRedirectUrl)
+                const root = document.getElementById('root');
+                if (root) {
+                  const fiberKey = Object.keys(root).find(k => k.startsWith('__reactFiber'));
+                  if (fiberKey) {
+                    let fiber = root[fiberKey];
+                    const visited = new Set();
+                    const search = (f) => {
+                      if (!f || visited.has(f) || externalUrl) return;
+                      visited.add(f);
+                      if (f.memoizedProps && f.memoizedProps.jobDetails) {
+                        const jd = f.memoizedProps.jobDetails;
+                        if (jd.companyApplyUrl || jd.applyRedirectUrl) {
+                          externalUrl = jd.companyApplyUrl || jd.applyRedirectUrl;
+                          isExternal = true;
+                        }
+                      }
+                      search(f.child);
+                      search(f.sibling);
+                    };
+                    search(fiber);
+                  }
+                }
+
+                // 2. Inspect global window state
+                if (!externalUrl) {
+                  for (const k of Object.keys(window)) {
+                    if ((k.includes('STATE') || k.includes('DATA')) && window[k] && window[k].jobDetails) {
+                      const jd = window[k].jobDetails;
+                      if (jd.companyApplyUrl || jd.applyRedirectUrl) {
+                        externalUrl = jd.companyApplyUrl || jd.applyRedirectUrl;
+                        isExternal = true;
+                        break;
+                      }
+                    }
+                  }
+                }
+
+                // 3. Inspect Apply button text / attributes
                 const btn = document.querySelector('#apply-button, button.apply-button, button[class*="apply"]');
-                return btn && /company site|external/i.test(btn.innerText);
+                if (btn) {
+                  const btnText = btn.innerText || btn.textContent || '';
+                  if (/company site|external|apply on/i.test(btnText)) {
+                    isExternal = true;
+                  }
+                }
+
+                return { isExternal, externalUrl };
               });
 
-              if (isExternal) {
-                log(`   ℹ️ External Job (Redirects to company portal). Saved to applied tracking.`);
-                appliedDb.applied.push({
-                  jobId: job.jobId,
-                  title: job.title,
-                  company: job.company,
-                  url: job.url,
-                  category: analysis.category,
-                  resumeUsed: analysis.resumeName,
-                  matchScore: analysis.matchScore,
-                  appliedAt: new Date().toISOString(),
-                  status: 'EXTERNAL_REDIRECT',
-                });
-                appliedUrls.add(job.url);
-                saveAppliedJobs(appliedDb);
-                await jobPage.close().catch(() => {});
+              if (applyMeta.isExternal || applyMeta.externalUrl) {
+                log(`   ℹ️ External Job (Redirects to company portal: ${applyMeta.externalUrl ? applyMeta.externalUrl.slice(0, 50) + '...' : 'Company Portal'}). Launching AI Career Page Engine...`);
+                let externalPage = null;
+                try {
+                  if (applyMeta.externalUrl && !applyMeta.externalUrl.includes('naukri.com')) {
+                    externalPage = await ctx.newPage();
+                    await externalPage.goto(applyMeta.externalUrl, { waitUntil: 'domcontentloaded', timeout: 40000 });
+                  } else {
+                    const popupPromise = ctx.waitForEvent('page', { timeout: 10000 }).catch(() => null);
+                    const extBtn = jobPage.locator('#apply-button, button.apply-button, button[class*="apply"]').first();
+                    if (await extBtn.isVisible().catch(() => false)) {
+                      await extBtn.click();
+                      externalPage = await popupPromise;
+                    }
+                    if (!externalPage) {
+                      await jobPage.waitForTimeout(3000);
+                      externalPage = jobPage;
+                    }
+                  }
+
+                  const extRes = await applyToCareerPage(externalPage, job, analysis, {
+                    cv: CV,
+                    geminiKey,
+                    dryRun: IS_DRY_RUN,
+                    log,
+                  });
+
+                  appliedDb.applied.push({
+                    jobId: job.jobId,
+                    title: job.title,
+                    company: job.company,
+                    portal: `Naukri (${extRes.atsProvider || 'Company Site'})`,
+                    url: job.url,
+                    externalUrl: extRes.submissionUrl || applyMeta.externalUrl || job.url,
+                    location: job.location,
+                    category: analysis.category,
+                    resumeUsed: analysis.resumeName,
+                    tailoredResumePath: analysis.tailoredResumePath || analysis.selectedResume,
+                    s3Url: analysis.s3Url || null,
+                    s3Key: analysis.s3Key || null,
+                    isTailored: analysis.isTailored || false,
+                    matchScore: analysis.matchScore,
+                    matchedSkills: analysis.matchedSkills || [],
+                    missingSkills: analysis.missingSkills || [],
+                    aiReasoning: analysis.reasoning || '',
+                    interviewTips: analysis.interviewTips || [],
+                    highlightedSkills: analysis.highlightedSkills || [],
+                    tailoredSummary: analysis.tailoredSummary || '',
+                    jobDescription: (fullJd || '').slice(0, 3000),
+                    appliedAt: new Date().toISOString(),
+                    status: extRes.status || 'APPLIED',
+                    reason: extRes.reason || null,
+                  });
+                  appliedUrls.add(job.url);
+                  saveAppliedJobs(appliedDb);
+
+                  if (extRes.status === 'APPLIED' || extRes.status === 'PREVIEW_DRY_RUN') {
+                    totalAppliedThisRun++;
+                  }
+                } catch (extErr) {
+                  log(`   ⚠️ Could not complete external application: ${extErr.message}`);
+                } finally {
+                  if (externalPage && externalPage !== jobPage) await externalPage.close().catch(() => {});
+                  await jobPage.close().catch(() => {});
+                }
                 continue;
               }
 
@@ -211,9 +367,21 @@ function sleep(ms) {
                   company: job.company,
                   portal: 'Naukri',
                   url: job.url,
+                  location: job.location,
                   category: analysis.category,
                   resumeUsed: analysis.resumeName,
+                  tailoredResumePath: analysis.tailoredResumePath || analysis.selectedResume,
+                  s3Url: analysis.s3Url || null,
+                  s3Key: analysis.s3Key || null,
+                  isTailored: analysis.isTailored || false,
                   matchScore: analysis.matchScore,
+                  matchedSkills: analysis.matchedSkills || [],
+                  missingSkills: analysis.missingSkills || [],
+                  aiReasoning: analysis.reasoning || '',
+                  interviewTips: analysis.interviewTips || [],
+                  highlightedSkills: analysis.highlightedSkills || [],
+                  tailoredSummary: analysis.tailoredSummary || '',
+                  jobDescription: (fullJd || '').slice(0, 3000),
                   appliedAt: new Date().toISOString(),
                   status: 'PREVIEW_DRY_RUN',
                 });
@@ -290,6 +458,7 @@ function sleep(ms) {
                   company: job.company,
                   portal: 'Naukri',
                   url: job.url,
+                  location: job.location,
                   category: analysis.category,
                   resumeUsed: analysis.resumeName,
                   tailoredResumePath: analysis.tailoredResumePath || analysis.selectedResume,
@@ -300,7 +469,10 @@ function sleep(ms) {
                   matchedSkills: analysis.matchedSkills || [],
                   missingSkills: analysis.missingSkills || [],
                   aiReasoning: analysis.reasoning || '',
-                  aiEnhanced: analysis.aiEnhanced || false,
+                  interviewTips: analysis.interviewTips || [],
+                  highlightedSkills: analysis.highlightedSkills || [],
+                  tailoredSummary: analysis.tailoredSummary || '',
+                  jobDescription: (fullJd || '').slice(0, 3000),
                   appliedAt: new Date().toISOString(),
                   status: 'APPLIED',
                 });
