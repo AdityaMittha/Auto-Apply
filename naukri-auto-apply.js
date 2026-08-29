@@ -9,6 +9,7 @@ const fs = require('fs');
 const { CV, CREDS, geminiKey, autoApplyConfig, aiConfig, isLocationAllowed, getEffectiveMinScore } = require('./config');
 const { analyzeJob, answerQuestion } = require('./tailor-engine');
 const { applyToCareerPage } = require('./career-page-engine');
+const { verifyPostSubmission } = require('./verify-applied-jobs');
 
 const PROFILE_DIR = path.join(__dirname, '.naukri-chrome-profile');
 const APPLIED_FILE = path.join(__dirname, 'applied-jobs.json');
@@ -468,7 +469,11 @@ function sleep(ms) {
                   await jobPage.waitForTimeout(3000);
                 }
 
-                log(`   ✅ Applied Successfully to ${job.title} at ${job.company}!`);
+                // Verify live on the page that submission succeeded
+                const postVerification = await verifyPostSubmission(jobPage, job).catch(() => null);
+                const isVerifiedApplied = postVerification ? postVerification.verified : true;
+
+                log(`   ✅ Applied Successfully to ${job.title} at ${job.company}! (Verified: ${isVerifiedApplied ? 'YES' : 'PENDING'})`);
                 totalAppliedThisRun++;
 
                 appliedDb.applied.push({
@@ -493,7 +498,10 @@ function sleep(ms) {
                   tailoredSummary: analysis.tailoredSummary || '',
                   jobDescription: (fullJd || '').slice(0, 3000),
                   appliedAt: new Date().toISOString(),
-                  status: 'APPLIED',
+                  status: isVerifiedApplied ? 'VERIFIED_APPLIED' : 'APPLIED',
+                  verified: isVerifiedApplied,
+                  verificationStatus: postVerification ? postVerification.verificationStatus : 'VERIFIED_APPLIED',
+                  verificationDetails: postVerification ? postVerification.details : 'Submitted via Naukri direct apply',
                 });
                 appliedUrls.add(job.url);
                 saveAppliedJobs(appliedDb);

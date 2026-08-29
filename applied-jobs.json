@@ -10,7 +10,12 @@
       "resumeUsed": "Mittha_Aditya_Embedded.pdf",
       "matchScore": 75,
       "appliedAt": "2026-08-26T08:44:26.149Z",
-      "status": "PREVIEW_DRY_RUN"
+      "status": "VERIFIED_APPLIED",
+      "verified": true,
+      "verificationStatus": "VERIFIED_APPLIED",
+      "verifiedAt": "2026-08-29T17:57:22.781Z",
+      "verificationMethod": "LIVE_PAGE_DOM",
+      "verificationDetails": "Button text is 'Applied' (disabled: false)"
     },
     {
       "jobId": "110722502693",
@@ -22,7 +27,12 @@
       "resumeUsed": "Mittha_Aditya_Embedded.pdf",
       "matchScore": 83,
       "appliedAt": "2026-08-26T08:44:30.921Z",
-      "status": "PREVIEW_DRY_RUN"
+      "status": "VERIFIED_APPLIED",
+      "verified": true,
+      "verificationStatus": "VERIFIED_APPLIED",
+      "verifiedAt": "2026-08-29T17:57:28.535Z",
+      "verificationMethod": "LIVE_PAGE_DOM",
+      "verificationDetails": "Button text is 'Applied' (disabled: false)"
     },
     {
       "jobId": "260826016544",
@@ -34,7 +44,12 @@
       "resumeUsed": "Mittha_Aditya_Embedded.pdf",
       "matchScore": 90,
       "appliedAt": "2026-08-26T08:44:34.719Z",
-      "status": "PREVIEW_DRY_RUN"
+      "status": "VERIFIED_APPLIED",
+      "verified": true,
+      "verificationStatus": "VERIFIED_APPLIED",
+      "verifiedAt": "2026-08-29T17:57:34.192Z",
+      "verificationMethod": "LIVE_PAGE_DOM",
+      "verificationDetails": "Button text is 'Applied' (disabled: false)"
     },
     {
       "jobId": "260826017534",
@@ -46,7 +61,12 @@
       "resumeUsed": "Mittha_Aditya_Embedded.pdf",
       "matchScore": 83,
       "appliedAt": "2026-08-26T08:44:38.786Z",
-      "status": "PREVIEW_DRY_RUN"
+      "status": "VERIFIED_APPLIED",
+      "verified": true,
+      "verificationStatus": "VERIFIED_APPLIED",
+      "verifiedAt": "2026-08-29T17:57:39.239Z",
+      "verificationMethod": "LIVE_PAGE_DOM",
+      "verificationDetails": "Button text is 'Applied' (disabled: false)"
     },
     {
       "jobId": "301025505357",
@@ -58,7 +78,12 @@
       "resumeUsed": "Mittha_Aditya_Embedded.pdf",
       "matchScore": 83,
       "appliedAt": "2026-08-26T08:44:42.972Z",
-      "status": "PREVIEW_DRY_RUN"
+      "status": "VERIFIED_APPLIED",
+      "verified": true,
+      "verificationStatus": "VERIFIED_APPLIED",
+      "verifiedAt": "2026-08-29T17:57:44.039Z",
+      "verificationMethod": "LIVE_PAGE_DOM",
+      "verificationDetails": "Button text is 'Applied' (disabled: false)"
     },
     {
       "jobId": "260625504092",
@@ -70,7 +95,12 @@
       "resumeUsed": "Mittha_Aditya_Embedded.pdf",
       "matchScore": 83,
       "appliedAt": "2026-08-26T08:44:47.303Z",
-      "status": "PREVIEW_DRY_RUN"
+      "status": "VERIFIED_APPLIED",
+      "verified": true,
+      "verificationStatus": "VERIFIED_APPLIED",
+      "verifiedAt": "2026-08-29T17:57:49.620Z",
+      "verificationMethod": "LIVE_PAGE_DOM",
+      "verificationDetails": "Button text is 'Applied' (disabled: false)"
     },
     {
       "jobId": "260626505205",
@@ -82,7 +112,12 @@
       "resumeUsed": "Mittha_Aditya_Embedded.pdf",
       "matchScore": 68,
       "appliedAt": "2026-08-26T08:44:51.687Z",
-      "status": "PREVIEW_DRY_RUN"
+      "status": "VERIFIED_APPLIED",
+      "verified": true,
+      "verificationStatus": "VERIFIED_APPLIED",
+      "verifiedAt": "2026-08-29T17:57:54.602Z",
+      "verificationMethod": "LIVE_PAGE_DOM",
+      "verificationDetails": "Button text is 'Applied' (disabled: false)"
     },
     {
       "jobId": "260626505206",
@@ -94,7 +129,12 @@
       "resumeUsed": "Mittha_Aditya_Embedded.pdf",
       "matchScore": 68,
       "appliedAt": "2026-08-26T08:44:55.402Z",
-      "status": "PREVIEW_DRY_RUN"
+      "status": "VERIFIED_APPLIED",
+      "verified": true,
+      "verificationStatus": "VERIFIED_APPLIED",
+      "verifiedAt": "2026-08-29T17:57:59.581Z",
+      "verificationMethod": "LIVE_PAGE_DOM",
+      "verificationDetails": "Button text is 'Applied' (disabled: false)"
     },
     {
       "jobId": "130923501957",
@@ -106,7 +146,12 @@
       "resumeUsed": "Mittha_Aditya_Embedded.pdf",
       "matchScore": 75,
       "appliedAt": "2026-08-26T08:44:59.641Z",
-      "status": "PREVIEW_DRY_RUN"
+      "status": "VERIFIED_APPLIED",
+      "verified": true,
+      "verificationStatus": "VERIFIED_APPLIED",
+      "verifiedAt": "2026-08-29T17:58:05.340Z",
+      "verificationMethod": "LIVE_PAGE_DOM",
+      "verificationDetails": "Button text is 'Applied' (disabled: false)"
     },
     {
       "jobId": "090726500016",
@@ -118,7 +163,12 @@
       "resumeUsed": "Mittha_Aditya_Embedded.pdf",
       "matchScore": 75,
       "appliedAt": "2026-08-26T08:45:03.577Z",
-      "status": "PREVIEW_DRY_RUN"
+      "status": "VERIFIED_APPLIED",
+      "verified": true,
+      "verificationStatus": "VERIFIED_APPLIED",
+      "verifiedAt": "2026-08-29T17:58:10.702Z",
+      "verificationMethod": "LIVE_PAGE_DOM",
+      "verificationDetails": "Button text is 'Applied' (disabled: false)"
     },
     {
       "jobId": "110722502696",
@@ -1047,7 +1097,386 @@
       "jobDescription": "Actively hiring\nElectronic & Communication Engineering Associate\nMegaminds IT Services\nWork from home\nSTART DATE\nImmediately\nDURATION\n6 Months\nSTIPEND\n₹ 2,000 - 8,000 /month\nAPPLY BY\n31 Aug' 26\nPosted 3 weeks ago\nInternship\n695 applicants\nContinue with Google\nAbout the work from home job/internship\nSelected intern's day-to-day responsibilities include:\n\n1. Work with microcontrollers like Arduino, STM32, ESP32, Raspberry Pi\n2. Develop embedded software using C/C++ or Python\n3. Design and implement IoT-based systems\n4. Interface sensors, actuators, and communication modules\n5. Debug hardware and software issues in real-time systems\n6. Assist in PCB design and circuit development (optional but preferred)\n7. Work on RF communication and wireless systems (HFSS, ADS, QUCS)\n8. Collaborate on simulation tools like MATLAB/Simulink\nSkill(s) required\nArduino\nC++ Programming\nESP32\nInternet of Things (IoT)\nMATLAB\nPython\nRaspberry Pi\nSimulink\nSTM32\nEarn certifications in these skills\nLearn Arduino\nLearn C++ Programming\nLearn MATLAB\nLearn Python\n\nWho can apply\n\nOnly those candidates can apply who:\n\n1. are available for the work from home job/internship\n\n2. can start the work from home job/internship between 1st Aug'26 and 5th Sep'26\n\n3. are available for duration of 6 months\n\n4. have relevant skills and interests\n\nOther requirements\n\n1. Strong understanding of embedded systems and microcontrollers.\n\n2. Programming knowledge in C, C++, or Python.\n\n3. Familiarity with circuit design and interfacing.\n\n4. Basic understanding of communication protocols (UART, SPI, I2C).\n\n5. Good problem-solving and analytical skills.\n\nPerks\nCertificate\nLetter of recommendation\nFlexible work hours\nNumber of openings\n4\nAbout Megaminds IT Services\nHyderabad\nWe provide application solutions and development needs to clients. We offer business solutions for computing and creative excellence and deliver innovative and cost-effective solutions with ethics. Our experienced and committed team, with its strong focus on technology, is the backbone of our company in delivering the synergy of creative solutions. We design, develop, and deliver cost-effective and high-quality software applications. We provide e-commerce, retail, manufacturing, and many other services. We work on political campaigning with transparency. Megaminds IT Services (now Megaminds IT & Job Consultancy Services) has started job consultancy services too.\nActivity on Internshala\nHiring since March 2019\n428 opportunities posted\n93 candidates hired\nApply now",
       "appliedAt": "2026-08-27T13:14:14.579Z",
       "status": "PREVIEW_DRY_RUN"
+    },
+    {
+      "jobId": "050326501746",
+      "title": "Embedded Software Engineer",
+      "company": "Behr-Hella Thermocontrol India Private Limited",
+      "portal": "Naukri (Company Career Portal)",
+      "url": "https://www.naukri.com/job-listings-embedded-software-engineer-behr-hella-thermocontrol-india-private-limited-pune-0-to-4-years-050326501746",
+      "externalUrl": "https://www.naukri.com/job-listings-embedded-software-engineer-behr-hella-thermocontrol-india-private-limited-pune-0-to-4-years-050326501746",
+      "location": "Pune",
+      "category": "embedded_software",
+      "resumeUsed": "Mittha_Aditya_Embedded_Software.pdf",
+      "tailoredResumePath": "E:\\Naukri\\naukri_update\\resume\\Mittha_Aditya_Embedded_Software.pdf",
+      "s3Url": null,
+      "s3Key": null,
+      "isTailored": false,
+      "matchScore": 58,
+      "matchedSkills": [
+        "Embedded C (C99/C11)"
+      ],
+      "missingSkills": [
+        "FreeRTOS Multi-Threading",
+        "ARM Cortex-M & ESP32"
+      ],
+      "aiReasoning": "Strong technical match in embedded software engineering, low-level peripheral drivers, and FreeRTOS firmware architecture.",
+      "interviewTips": [
+        "Review core principles of Embedded C (C99/C11) and real-time task scheduling.",
+        "Be prepared to explain hardware-software interfacing and defect debugging from past projects."
+      ],
+      "highlightedSkills": [
+        "Embedded C (C99/C11)"
+      ],
+      "tailoredSummary": "Final-year Engineering student at Walchand Institute of Technology (9.27 CGPA) with hands-on proficiency in Python, AWS (Lambda/DynamoDB), Docker, REST APIs. Built distributed cloud telemetry agents and serverless pipelines (LabPulse) with automated Docker CI/CD workflows. Seeking the Embedded Software Engineer role to engineer scalable backend and cloud solutions.",
+      "jobDescription": "System Software components development Integration Analysis of Customer requireme...",
+      "appliedAt": "2026-08-29T16:36:46.048Z",
+      "status": "EXTERNAL_MANUAL_REQUIRED",
+      "reason": "Multi-step wizard requires manual completion",
+      "verified": false,
+      "verificationStatus": "ERROR_CHECKING",
+      "verifiedAt": "2026-08-29T17:58:13.975Z",
+      "verificationMethod": "FAILED",
+      "verificationDetails": "Page inspection failed: page.waitForTimeout: Target page, context or browser has been closed"
+    },
+    {
+      "jobId": "110722502698",
+      "title": "Embedded software Engineer",
+      "company": "Primohunt Corporate Noida",
+      "portal": "Naukri (Company Career Portal)",
+      "url": "https://www.naukri.com/job-listings-embedded-software-engineer-primohunt-corporate-noida-pune-0-to-5-years-110722502698",
+      "externalUrl": "https://www.naukri.com/job-listings-embedded-software-engineer-primohunt-corporate-noida-pune-0-to-5-years-110722502698",
+      "location": "Pune",
+      "category": "embedded_software",
+      "resumeUsed": "Mittha_Aditya_Embedded_Software.pdf",
+      "tailoredResumePath": "E:\\Naukri\\naukri_update\\resume\\Mittha_Aditya_Embedded_Software.pdf",
+      "s3Url": null,
+      "s3Key": null,
+      "isTailored": false,
+      "matchScore": 58,
+      "matchedSkills": [
+        "Embedded C (C99/C11)"
+      ],
+      "missingSkills": [
+        "FreeRTOS Multi-Threading",
+        "ARM Cortex-M & ESP32"
+      ],
+      "aiReasoning": "Strong technical match in embedded software engineering, low-level peripheral drivers, and FreeRTOS firmware architecture.",
+      "interviewTips": [
+        "Review core principles of Embedded C (C99/C11) and real-time task scheduling.",
+        "Be prepared to explain hardware-software interfacing and defect debugging from past projects."
+      ],
+      "highlightedSkills": [
+        "Embedded C (C99/C11)"
+      ],
+      "tailoredSummary": "Final-year Engineering student at Walchand Institute of Technology (9.27 CGPA) with hands-on proficiency in Python, AWS (Lambda/DynamoDB), Docker, REST APIs. Built distributed cloud telemetry agents and serverless pipelines (LabPulse) with automated Docker CI/CD workflows. Seeking the Embedded software Engineer role to engineer scalable backend and cloud solutions.",
+      "jobDescription": "Qualification: BE in Electronic or Instrumentation Experience: 3 to 5 years in Embe...",
+      "appliedAt": "2026-08-29T16:36:56.845Z",
+      "status": "EXTERNAL_MANUAL_REQUIRED",
+      "reason": "Multi-step wizard requires manual completion"
+    },
+    {
+      "jobId": "110722502697",
+      "title": "Embedded software Developer",
+      "company": "Primohunt Corporate Noida",
+      "portal": "Naukri (Company Career Portal)",
+      "url": "https://www.naukri.com/job-listings-embedded-software-developer-primohunt-corporate-noida-pune-0-to-6-years-110722502697",
+      "externalUrl": "https://www.naukri.com/job-listings-embedded-software-developer-primohunt-corporate-noida-pune-0-to-6-years-110722502697",
+      "location": "Pune",
+      "category": "embedded_software",
+      "resumeUsed": "Mittha_Aditya_Embedded_Software.pdf",
+      "tailoredResumePath": "E:\\Naukri\\naukri_update\\resume\\Mittha_Aditya_Embedded_Software.pdf",
+      "s3Url": null,
+      "s3Key": null,
+      "isTailored": false,
+      "matchScore": 58,
+      "matchedSkills": [
+        "Embedded C (C99/C11)"
+      ],
+      "missingSkills": [
+        "FreeRTOS Multi-Threading",
+        "ARM Cortex-M & ESP32"
+      ],
+      "aiReasoning": "Strong technical match in embedded software engineering, low-level peripheral drivers, and FreeRTOS firmware architecture.",
+      "interviewTips": [
+        "Review core principles of Embedded C (C99/C11) and real-time task scheduling.",
+        "Be prepared to explain hardware-software interfacing and defect debugging from past projects."
+      ],
+      "highlightedSkills": [
+        "Embedded C (C99/C11)"
+      ],
+      "tailoredSummary": "Final-year Engineering student at Walchand Institute of Technology (9.27 CGPA) with hands-on proficiency in Python, AWS (Lambda/DynamoDB), Docker, REST APIs. Built distributed cloud telemetry agents and serverless pipelines (LabPulse) with automated Docker CI/CD workflows. Seeking the Embedded software Developer role to engineer scalable backend and cloud solutions.",
+      "jobDescription": "To understand / analyze the requirement provided by Product Owner for any specific feat...",
+      "appliedAt": "2026-08-29T16:37:07.773Z",
+      "status": "EXTERNAL_MANUAL_REQUIRED",
+      "reason": "Multi-step wizard requires manual completion"
+    },
+    {
+      "jobId": "280725503269",
+      "title": "Car Electronics Engineer - CANBUS/ AutoSARI Arduino / ECU",
+      "company": "Suma Japanese Technologies",
+      "portal": "Naukri (Company Career Portal)",
+      "url": "https://www.naukri.com/job-listings-car-electronics-engineer-canbus-autosari-arduino-ecu-suma-japanese-technologies-private-limited-pune-0-to-2-years-280725503269",
+      "externalUrl": "https://www.naukri.com/job-listings-car-electronics-engineer-canbus-autosari-arduino-ecu-suma-japanese-technologies-private-limited-pune-0-to-2-years-280725503269",
+      "location": "Pune",
+      "category": "embedded",
+      "resumeUsed": "Mittha_Aditya_Embedded.pdf",
+      "tailoredResumePath": "E:\\Naukri\\naukri_update\\resume\\Mittha_Aditya_Embedded.pdf",
+      "s3Url": null,
+      "s3Key": null,
+      "isTailored": false,
+      "matchScore": 58,
+      "matchedSkills": [
+        "CAN Protocol"
+      ],
+      "missingSkills": [
+        "Embedded C",
+        "FreeRTOS"
+      ],
+      "aiReasoning": "Strong technical match in microcontroller interfacing, IoT systems, and hardware-software integration.",
+      "interviewTips": [
+        "Review core principles of CAN Protocol and real-time task scheduling.",
+        "Be prepared to explain hardware-software interfacing and defect debugging from past projects."
+      ],
+      "highlightedSkills": [
+        "CAN Protocol"
+      ],
+      "tailoredSummary": "Final-year Electronics and Telecommunication Engineering student at Walchand Institute of Technology (9.27 CGPA) with hands-on firmware development experience in Embedded C, FreeRTOS, ESP32, ARM Cortex-M. Engineered real-time sensor communication protocols and low-level firmware during an embedded internship at Codec Technologies India and IoT projects (AQUANOVA, SORTIFY). Seeking the Car Electronics Engineer - CANBUS/ AutoSARI Arduino / ECU role to build robust embedded systems.",
+      "jobDescription": "Experience in OEM/ Tier-1 preferredRequirements: Experience in electronics engineeringE...",
+      "appliedAt": "2026-08-29T16:37:18.756Z",
+      "status": "EXTERNAL_MANUAL_REQUIRED",
+      "reason": "Multi-step wizard requires manual completion"
+    },
+    {
+      "jobId": "220425502840",
+      "title": "Electronics Hardware Engineer",
+      "company": "Krazy Mantra It",
+      "portal": "Naukri (Company Career Portal)",
+      "url": "https://www.naukri.com/job-listings-electronics-hardware-engineer-krazy-mantra-group-of-companies-pune-0-to-3-years-220425502840",
+      "externalUrl": "https://www.naukri.com/job-listings-electronics-hardware-engineer-krazy-mantra-group-of-companies-pune-0-to-3-years-220425502840",
+      "location": "Pune",
+      "category": "embedded",
+      "resumeUsed": "Mittha_Aditya_Embedded.pdf",
+      "tailoredResumePath": "E:\\Naukri\\naukri_update\\resume\\Mittha_Aditya_Embedded.pdf",
+      "s3Url": null,
+      "s3Key": null,
+      "isTailored": false,
+      "matchScore": 82,
+      "matchedSkills": [
+        "Embedded C",
+        "FreeRTOS",
+        "ESP32",
+        "ARM Cortex-M"
+      ],
+      "missingSkills": [
+        "Embedded C",
+        "FreeRTOS"
+      ],
+      "aiReasoning": "Strong technical match in microcontroller interfacing, IoT systems, and hardware-software integration.",
+      "interviewTips": [
+        "Review core principles of Embedded C and real-time task scheduling.",
+        "Be prepared to explain hardware-software interfacing and defect debugging from past projects."
+      ],
+      "highlightedSkills": [
+        "Embedded C",
+        "FreeRTOS",
+        "ESP32",
+        "ARM Cortex-M"
+      ],
+      "tailoredSummary": "Final-year Electronics and Telecommunication Engineering student at Walchand Institute of Technology (9.27 CGPA) with hands-on firmware development experience in Embedded C, FreeRTOS, ESP32, ARM Cortex-M. Engineered real-time sensor communication protocols and low-level firmware during an embedded internship at Codec Technologies India and IoT projects (AQUANOVA, SORTIFY). Seeking the Electronics Hardware Engineer role to build robust embedded systems.",
+      "jobDescription": "Ensure compliance with industry standards and regulations. Disclaimer: This job descrip...",
+      "appliedAt": "2026-08-29T16:37:32.030Z",
+      "status": "EXTERNAL_MANUAL_REQUIRED",
+      "reason": "Multi-step wizard requires manual completion"
+    },
+    {
+      "jobId": "120826009310",
+      "title": "RAG Specialist (Engineering Document Intelligence)",
+      "company": "CT Automotive",
+      "portal": "Naukri",
+      "url": "https://www.naukri.com/job-listings-rag-specialist-engineering-document-intelligence-ct-automotive-pune-0-to-5-years-120826009310",
+      "location": "Pune",
+      "category": "python_devops",
+      "resumeUsed": "Mittha_Aditya.pdf",
+      "tailoredResumePath": "E:\\Naukri\\naukri_update\\resume\\Mittha_Aditya.pdf",
+      "s3Url": null,
+      "s3Key": null,
+      "isTailored": false,
+      "matchScore": 58,
+      "matchedSkills": [
+        "CI/CD Pipelines"
+      ],
+      "missingSkills": [
+        "Python",
+        "AWS (Lambda/DynamoDB)"
+      ],
+      "aiReasoning": "Strong technical match in Python backend, cloud serverless architecture, and automated workflows.",
+      "interviewTips": [
+        "Review core principles of CI/CD Pipelines and real-time task scheduling.",
+        "Be prepared to explain hardware-software interfacing and defect debugging from past projects."
+      ],
+      "highlightedSkills": [
+        "CI/CD Pipelines"
+      ],
+      "tailoredSummary": "Final-year Engineering student at Walchand Institute of Technology (9.27 CGPA) with hands-on proficiency in Python, AWS (Lambda/DynamoDB), Docker, REST APIs. Built distributed cloud telemetry agents and serverless pipelines (LabPulse) with automated Docker CI/CD workflows. Seeking the RAG Specialist (Engineering Document Intelligence) role to engineer scalable backend and cloud solutions.",
+      "jobDescription": "Type: Full time, permanentThe defining challenge of this role: documents such as PFMEA ...",
+      "appliedAt": "2026-08-29T16:37:39.162Z",
+      "status": "APPLIED"
+    },
+    {
+      "jobId": "230626507188",
+      "title": "Computer Vision Engineer",
+      "company": "Vasundharaa Geo Technologies",
+      "portal": "Naukri (Company Career Portal)",
+      "url": "https://www.naukri.com/job-listings-computer-vision-engineer-vasundharaa-geo-technologies-private-limited-pune-0-to-3-years-230626507188",
+      "externalUrl": "https://www.naukri.com/job-listings-computer-vision-engineer-vasundharaa-geo-technologies-private-limited-pune-0-to-3-years-230626507188",
+      "location": "Pune",
+      "category": "python_devops",
+      "resumeUsed": "Mittha_Aditya.pdf",
+      "tailoredResumePath": "E:\\Naukri\\naukri_update\\resume\\Mittha_Aditya.pdf",
+      "s3Url": null,
+      "s3Key": null,
+      "isTailored": false,
+      "matchScore": 58,
+      "matchedSkills": [
+        "CI/CD Pipelines"
+      ],
+      "missingSkills": [
+        "Python",
+        "AWS (Lambda/DynamoDB)"
+      ],
+      "aiReasoning": "Strong technical match in Python backend, cloud serverless architecture, and automated workflows.",
+      "interviewTips": [
+        "Review core principles of CI/CD Pipelines and real-time task scheduling.",
+        "Be prepared to explain hardware-software interfacing and defect debugging from past projects."
+      ],
+      "highlightedSkills": [
+        "CI/CD Pipelines"
+      ],
+      "tailoredSummary": "Final-year Engineering student at Walchand Institute of Technology (9.27 CGPA) with hands-on proficiency in Python, AWS (Lambda/DynamoDB), Docker, REST APIs. Built distributed cloud telemetry agents and serverless pipelines (LabPulse) with automated Docker CI/CD workflows. Seeking the Computer Vision Engineer role to engineer scalable backend and cloud solutions.",
+      "jobDescription": "Education: A bachelor s or higher degree in computer science, computer engineering, ele...",
+      "appliedAt": "2026-08-29T16:38:00.913Z",
+      "status": "EXTERNAL_MANUAL_REQUIRED",
+      "reason": "Multi-step wizard requires manual completion"
+    },
+    {
+      "jobId": "020826004541",
+      "title": "AI Vision & Machine Learning Software Engineer Stock Trading engineer",
+      "company": "SSG Infotech",
+      "portal": "Naukri",
+      "url": "https://www.naukri.com/job-listings-ai-vision-machine-learning-software-engineer-stock-trading-engineer-ssg-medical-centre-pune-0-to-5-years-020826004541",
+      "location": "Remote",
+      "category": "python_devops",
+      "resumeUsed": "Mittha_Aditya.pdf",
+      "tailoredResumePath": "E:\\Naukri\\naukri_update\\resume\\Mittha_Aditya.pdf",
+      "s3Url": null,
+      "s3Key": null,
+      "isTailored": false,
+      "matchScore": 82,
+      "matchedSkills": [
+        "Python",
+        "AWS (Lambda/DynamoDB)",
+        "Docker",
+        "REST APIs"
+      ],
+      "missingSkills": [
+        "Python",
+        "AWS (Lambda/DynamoDB)"
+      ],
+      "aiReasoning": "Strong technical match in Python backend, cloud serverless architecture, and automated workflows.",
+      "interviewTips": [
+        "Review core principles of Python and real-time task scheduling.",
+        "Be prepared to explain hardware-software interfacing and defect debugging from past projects."
+      ],
+      "highlightedSkills": [
+        "Python",
+        "AWS (Lambda/DynamoDB)",
+        "Docker",
+        "REST APIs"
+      ],
+      "tailoredSummary": "Final-year Engineering student at Walchand Institute of Technology (9.27 CGPA) with hands-on proficiency in Python, AWS (Lambda/DynamoDB), Docker, REST APIs. Built distributed cloud telemetry agents and serverless pipelines (LabPulse) with automated Docker CI/CD workflows. Seeking the AI Vision & Machine Learning Software Engineer Stock Trading engineer role to engineer scalable backend and cloud solutions.",
+      "jobDescription": "About Us-We are developing next-generation AI-based software for the Indian stock marke...",
+      "appliedAt": "2026-08-29T16:38:07.625Z",
+      "status": "APPLIED"
+    },
+    {
+      "jobId": "030425503081",
+      "title": "Asst. Design Engineer - Electrical / Eletronics",
+      "company": "Versil Pumps",
+      "portal": "Naukri (Company Career Portal)",
+      "url": "https://www.naukri.com/job-listings-asst-design-engineer-electrical-eletronics-versil-pumps-llp-indore-pune-jaipur-rajkot-0-to-1-years-030425503081",
+      "externalUrl": "https://www.naukri.com/job-listings-asst-design-engineer-electrical-eletronics-versil-pumps-llp-indore-pune-jaipur-rajkot-0-to-1-years-030425503081",
+      "location": "Pune, Indore, Jaipur, Rajkot",
+      "category": "embedded",
+      "resumeUsed": "Mittha_Aditya_Embedded.pdf",
+      "tailoredResumePath": "E:\\Naukri\\naukri_update\\resume\\Mittha_Aditya_Embedded.pdf",
+      "s3Url": null,
+      "s3Key": null,
+      "isTailored": false,
+      "matchScore": 58,
+      "matchedSkills": [
+        "CAN Protocol"
+      ],
+      "missingSkills": [
+        "Embedded C",
+        "FreeRTOS"
+      ],
+      "aiReasoning": "Strong technical match in microcontroller interfacing, IoT systems, and hardware-software integration.",
+      "interviewTips": [
+        "Review core principles of CAN Protocol and real-time task scheduling.",
+        "Be prepared to explain hardware-software interfacing and defect debugging from past projects."
+      ],
+      "highlightedSkills": [
+        "CAN Protocol"
+      ],
+      "tailoredSummary": "Final-year Electronics and Telecommunication Engineering student at Walchand Institute of Technology (9.27 CGPA) with hands-on firmware development experience in Embedded C, FreeRTOS, ESP32, ARM Cortex-M. Engineered real-time sensor communication protocols and low-level firmware during an embedded internship at Codec Technologies India and IoT projects (AQUANOVA, SORTIFY). Seeking the Asst. Design Engineer - Electrical / Eletronics role to build robust embedded systems.",
+      "jobDescription": "Vacancy . 04 (Male / Female) . Qualifications . B.tech / MTech in Electrical EngFresher...",
+      "appliedAt": "2026-08-29T16:38:28.527Z",
+      "status": "EXTERNAL_MANUAL_REQUIRED",
+      "reason": "Multi-step wizard requires manual completion"
+    },
+    {
+      "jobId": "140826504477",
+      "title": "Software Engineer 2",
+      "company": "Visteon",
+      "portal": "Naukri (Company Site)",
+      "url": "https://www.naukri.com/job-listings-software-engineer-2-visteon-automotive-india-private-limited-pune-0-to-1-years-140826504477",
+      "externalUrl": "https://www.naukri.com/job-listings-software-engineer-2-visteon-automotive-india-private-limited-pune-0-to-1-years-140826504477",
+      "location": "Pune",
+      "category": "python_devops",
+      "resumeUsed": "Mittha_Aditya.pdf",
+      "tailoredResumePath": "E:\\Naukri\\naukri_update\\resume\\Mittha_Aditya.pdf",
+      "s3Url": null,
+      "s3Key": null,
+      "isTailored": false,
+      "matchScore": 82,
+      "matchedSkills": [
+        "Python",
+        "AWS (Lambda/DynamoDB)",
+        "Docker",
+        "REST APIs"
+      ],
+      "missingSkills": [
+        "Python",
+        "AWS (Lambda/DynamoDB)"
+      ],
+      "aiReasoning": "Strong technical match in Python backend, cloud serverless architecture, and automated workflows.",
+      "interviewTips": [
+        "Review core principles of Python and real-time task scheduling.",
+        "Be prepared to explain hardware-software interfacing and defect debugging from past projects."
+      ],
+      "highlightedSkills": [
+        "Python",
+        "AWS (Lambda/DynamoDB)",
+        "Docker",
+        "REST APIs"
+      ],
+      "tailoredSummary": "Final-year Engineering student at Walchand Institute of Technology (9.27 CGPA) with hands-on proficiency in Python, AWS (Lambda/DynamoDB), Docker, REST APIs. Built distributed cloud telemetry agents and serverless pipelines (LabPulse) with automated Docker CI/CD workflows. Seeking the Software Engineer 2 role to engineer scalable backend and cloud solutions.",
+      "jobDescription": "Two major trends in the automotive industry the shift to electric vehicles and vehicles...",
+      "appliedAt": "2026-08-29T16:38:36.143Z",
+      "status": "EXTERNAL_MANUAL_REQUIRED",
+      "reason": "page.waitForTimeout: Target page, context or browser has been closed"
     }
   ],
-  "lastUpdated": "2026-08-27T13:14:14.579Z"
+  "lastUpdated": "2026-08-29T17:58:16.094Z"
 }

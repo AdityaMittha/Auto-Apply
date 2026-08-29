@@ -22,6 +22,9 @@ scp -o StrictHostKeyChecking=no -i $KEY_FILE *.js package.json .env applied-jobs
 if (Test-Path "$repo\public") {
     scp -o StrictHostKeyChecking=no -r -i $KEY_FILE "$repo\public" "${EC2_USER}@${EC2_IP}:${REMOTE_DIR}/"
 }
+if (Test-Path "$repo\docs") {
+    scp -o StrictHostKeyChecking=no -r -i $KEY_FILE "$repo\docs" "${EC2_USER}@${EC2_IP}:${REMOTE_DIR}/"
+}
 
 # 2. Resumes
 Write-Host "`n[2/5] Uploading resumes..." -ForegroundColor Yellow

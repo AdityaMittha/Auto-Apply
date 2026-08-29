@@ -188,27 +188,54 @@ AWS_REGION=ap-south-1
 ```
 ├── .env.example             # Environment variable template
 ├── apply-all.js             # Master runner for all 6 portals
+├── career-page-engine.js    # Direct company career portal / ATS application engine
 ├── config.js                # Central configuration & location filter helper
 ├── cron-setup.sh            # Automated crontab installer for EC2
+├── dashboard-server.js      # Web Dashboard Express backend & API
 ├── deploy-aws.sh            # Infrastructure provisioning script
 ├── deploy-s3.sh             # Amazon S3 bucket setup script
 ├── health-check.sh          # System health and process monitor
+├── login-all.js             # One-click portal login & session manager
 ├── mailer.js                # HTML email digest builder & sender
+├── naukri-auto-apply.js     # Naukri auto-apply engine
+├── internshala-apply.js     # Internshala auto-apply engine
+├── linkedin-apply.js        # LinkedIn Easy Apply engine
+├── indeed-apply.js          # Indeed auto-apply engine
+├── foundit-apply.js         # Foundit (Monster) auto-apply engine
+├── wellfound-apply.js       # Wellfound (AngelList) auto-apply engine
 ├── naukri-profile-refresh.js# Hourly Naukri bump script
 ├── resume-compiler.js       # Dynamic LaTeX compiler & S3 uploader
 ├── s3-storage.js            # Amazon S3 storage & presigned URL helper
+├── server-setup.sh          # Full EC2 server bootstrap & dependencies setup
+├── start-xvfb.sh            # Xvfb virtual display helper
 ├── status-tracker.js        # Portal application status scraper
 ├── tailor-engine.js         # Hybrid keyword + AI scoring engine
-├── gemini-ai.js             # Anti-AI humanized prompt engine (Gemini 3.6 Flash)
+├── gemini-ai.js             # Anti-AI humanized prompt engine (Gemini Flash)
 ├── cold-mailer.js           # Automated recruiter cold emailer
+├── verify-applied-jobs.js   # Live website application verification engine
 ├── run.sh                   # Headless Xvfb execution wrapper
+├── transfer-data.ps1        # Sync data and browser profiles to EC2 (PowerShell)
+├── transfer-data.sh         # Sync data and browser profiles to EC2 (Bash)
 ├── package.json             # NPM scripts & dependencies
-├── resume/
-│   ├── Aditya_Mittha_Embedded.tex  # Base LaTeX template (Embedded Systems)
-│   ├── Aditya_Mittha.tex           # Base LaTeX template (Python / DevOps)
-│   ├── Mittha_Aditya_Embedded.pdf  # Static PDF fallback
-│   ├── Mittha_Aditya.pdf           # Static PDF fallback
-│   └── tailored/                   # Dynamically compiled per-job PDFs
+├── docs/                    # Architecture & system design documentation
+│   ├── PROJECT_DOCUMENTATION.md
+│   └── AI_Job_Search_Automation_System.pdf
+├── public/                  # Web Dashboard frontend assets
+│   ├── index.html
+│   ├── css/dashboard.css
+│   └── js/
+│       ├── components.js
+│       └── dashboard.js
+├── resume/                  # LaTeX resume templates & canonical fallback PDFs
+│   ├── Aditya_Mittha_Embedded.tex
+│   ├── Aditya_Mittha_Embedded_Software.tex
+│   ├── Aditya_Mittha_Data_Analytics.tex
+│   ├── Aditya_Mittha.tex
+│   ├── Mittha_Aditya_Embedded.pdf
+│   ├── Mittha_Aditya_Embedded_Software.pdf
+│   ├── Mittha_Aditya_Data_Analytics.pdf
+│   ├── Mittha_Aditya.pdf
+│   └── tailored/            # Dynamically compiled per-job PDFs (gitignored)
 └── applied-jobs.json        # Database of submitted applications & statuses
 ```
 

@@ -74,10 +74,12 @@ $SSH_CMD "mkdir -p ${REMOTE_DIR}/resume"
 
 # --- 1. Upload Application Code & Config ---
 echo ""
-echo "🚀 [1/6] Uploading application code (*.js, package.json, .env)..."
+echo "🚀 [1/6] Uploading application code (*.js, package.json, .env, public/, docs/)..."
 for f in *.js package.json .env; do
   upload_file "$f" "${REMOTE_DIR}/$f"
 done
+upload_dir "public" "${REMOTE_DIR}/public"
+upload_dir "docs" "${REMOTE_DIR}/docs"
 
 # --- 2. Upload Resumes & Templates ---
 echo ""
