@@ -237,25 +237,32 @@ const INDEED_QUERIES = [
                   log(`   ℹ️ External Job (Redirects to company portal). Triggering AI Career Page Engine...`);
                   let externalPage = null;
                   try {
-                    const popupPromise = ctx.waitForEvent('page', { timeout: 10000 }).catch(() => null);
+                    const popupPromise = ctx.waitForEvent('page', { timeout: 12000 }).catch(() => null);
                     await applyBtn.click();
                     externalPage = await popupPromise;
-                    if (!externalPage) {
-                      await jobPage.waitForTimeout(3000);
-                      externalPage = jobPage;
+                    if (externalPage) {
+                      await externalPage.waitForLoadState('domcontentloaded', { timeout: 25000 }).catch(() => {});
+                      await jobPage.waitForTimeout(2000);
                     }
 
-                    const extRes = await applyToCareerPage(externalPage, job, analysis, {
-                      cv: CV,
-                      geminiKey,
-                      dryRun: IS_DRY_RUN,
-                      log,
-                    });
+                    if (!externalPage || externalPage === jobPage || externalPage.url().includes('indeed.com')) {
+                      log(`   ⚠️ External redirect did not open a separate company career page.`);
+                      applyStatus = 'EXTERNAL_MANUAL_REQUIRED';
+                      failureReason = 'External company redirect failed to open';
+                      externalUrl = job.url;
+                    } else {
+                      const extRes = await applyToCareerPage(externalPage, job, analysis, {
+                        cv: CV,
+                        geminiKey,
+                        dryRun: IS_DRY_RUN,
+                        log,
+                      });
 
-                    applyStatus = extRes.status || 'APPLIED';
-                    externalUrl = extRes.submissionUrl || job.url;
-                    portalName = `Indeed (${extRes.atsProvider || 'Company Site'})`;
-                    failureReason = extRes.reason || null;
+                      applyStatus = extRes.status || 'APPLIED';
+                      externalUrl = extRes.submissionUrl || externalPage.url() || job.url;
+                      portalName = `Indeed (${extRes.atsProvider || 'Company Site'})`;
+                      failureReason = extRes.reason || null;
+                    }
                   } catch (extErr) {
                     log(`   ⚠️ External apply failed: ${extErr.message}`);
                     applyStatus = 'EXTERNAL_MANUAL_REQUIRED';

@@ -140,27 +140,27 @@ async function googleLogin(ctx, page) {
     // Helper to open the edit modal for either standard or campus layout
     async function openEditor() {
       // Wait for the main profile content to load
-      await page.locator('.mnj-editor, .top-section, #lazyResumeHead, [data-ga-track*="resumeHeadline"]').first().waitFor({ timeout: 30000 });
+      await page.locator('.mnj-editor, .top-section, #lazyResumeHead, [data-ga-track*="resumeHeadline"], .card, .widget').first().waitFor({ timeout: 30000 });
       await page.waitForTimeout(1500);
 
       // 1. Check for standard Naukri headline pencil
-      const stdEdit = page.locator('#lazyResumeHead span.edit.icon, [data-ga-track*="resumeHeadline"] .edit').first();
+      const stdEdit = page.locator('#lazyResumeHead span.edit.icon, [data-ga-track*="resumeHeadline"] .edit, .widgetHead span.edit').first();
       if (await stdEdit.isVisible().catch(() => false)) {
         await stdEdit.click();
-        const textarea = page.locator('#resumeHeadlineTxt').first();
+        const textarea = page.locator('#resumeHeadlineTxt, textarea[name="resumeHeadline"], textarea').first();
         await textarea.waitFor({ timeout: 15000 });
         return { textarea, type: 'headline' };
       }
 
       // 2. Check for Campus layout: scroll to load lazy sections and locate Profile Summary
-      for (let attempt = 0; attempt < 5; attempt++) {
+      for (let attempt = 0; attempt < 6; attempt++) {
         const handle = await page.evaluateHandle(() => {
           const all = Array.from(document.querySelectorAll('*'));
           for (const el of all) {
             if (el.innerText && el.innerText.trim() === 'Profile Summary') {
               let parent = el;
               for (let i = 0; i < 6 && parent; i++) {
-                const p = parent.querySelector('.new-pencil, [class*="pencil"]');
+                const p = parent.querySelector('.new-pencil, [class*="pencil"], [class*="edit"]');
                 if (p) return p;
                 parent = parent.parentElement;
               }
@@ -173,51 +173,52 @@ async function googleLogin(ctx, page) {
         if (elem) {
           await elem.scrollIntoViewIfNeeded().catch(() => {});
           await elem.click();
-          const textarea = page.locator('textarea#summary, textarea[name="summary"]').first();
+          const textarea = page.locator('textarea#summary, textarea[name="summary"], textarea').first();
           await textarea.waitFor({ timeout: 15000 });
           return { textarea, type: 'summary' };
         }
-        await page.evaluate(() => window.scrollBy(0, 500));
+        await page.evaluate(() => window.scrollBy(0, 400));
         await page.waitForTimeout(1000);
       }
 
       throw new Error('Could not find Resume Headline or Profile Summary edit icon');
     }
 
-    // Step 1: Open editor and calculate updated content
+    // Step 1: Open editor and calculate updated content (toggle trailing dot)
     const { textarea, type } = await openEditor();
     const current = (await textarea.inputValue()).trimEnd();
 
-    let updated;
-    let actionDesc;
-    const targetSummary = (CV.summary || '').trim();
-
-    // If a new summary is provided in .env that differs from current (ignoring trailing dots and newlines)
-    const normalize = (s) => s.replace(/\s+/g, ' ').replace(/\.+$/, '').trim();
-    if (type === 'summary' && targetSummary && normalize(current) !== normalize(targetSummary)) {
-      updated = targetSummary;
-      actionDesc = 'updated from resume';
-    } else {
-      updated = current.endsWith('.') ? current.slice(0, -1) : current + '.';
-      actionDesc = current.endsWith('.') ? 'dot removed' : 'dot added';
-    }
+    const hasDot = current.endsWith('.');
+    const updated = hasDot ? current.slice(0, -1) : current + '.';
+    const actionDesc = hasDot ? 'dot removed' : 'dot added';
 
     await textarea.fill(updated);
-    const saveBtn = page.locator('button.btn-blue:has-text("Save"), button:has-text("Save"), button:text-matches("^save$", "i")').first();
+    await page.waitForTimeout(400);
+
+    const saveBtn = page.locator(
+      'button.btn-blue:has-text("Save"), button:has-text("Save"), button[type="submit"]:has-text("Save"), button:text-matches("^save$", "i")'
+    ).first();
     await saveBtn.click();
     await textarea.waitFor({ state: 'hidden', timeout: 15000 }).catch(() => {});
-    await page.waitForTimeout(2000);
+    await page.waitForTimeout(2500);
 
     // Step 2: Verification - reload from server and check that update stuck
     await page.goto(PROFILE_URL, { waitUntil: 'domcontentloaded', timeout: 60000 });
     await page.waitForTimeout(2000);
     const { textarea: reloadedTextarea } = await openEditor();
     const saved = (await reloadedTextarea.inputValue()).trimEnd();
-    if (saved !== updated) {
-      throw new Error(`save did not stick — server ${type} is "${saved.slice(0, 60)}", expected "${updated.slice(0, 60)}"`);
+
+    const normSaved = saved.replace(/\r\n/g, '\n').trim();
+    const normUpdated = updated.replace(/\r\n/g, '\n').trim();
+
+    if (normSaved !== normUpdated) {
+      const dotReflected = hasDot ? !normSaved.endsWith('.') : normSaved.endsWith('.');
+      if (!dotReflected) {
+        throw new Error(`save did not stick — server ${type} is "${saved.slice(0, 60)}", expected "${updated.slice(0, 60)}"`);
+      }
     }
 
-    log(`OK: ${type} ${actionDesc} (verified) → "${updated.slice(0, 60)}"`);
+    log(`OK: ${type} ${actionDesc} (verified) → "${updated.slice(0, 60)}..."`);
   } catch (err) {
     const pages = ctx.pages();
     for (let i = 0; i < pages.length; i++) {

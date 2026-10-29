@@ -4,6 +4,7 @@
   "description": "Keeps a Naukri profile fresh by toggling a trailing dot on the resume headline/summary",
   "main": "naukri-profile-refresh.js",
   "scripts": {
+    "test": "node test-all-features.js",
     "refresh": "node naukri-profile-refresh.js",
     "refresh:visible": "node naukri-profile-refresh.js visible",
     "login": "node login-all.js",

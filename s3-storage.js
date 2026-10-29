@@ -23,6 +23,9 @@ function loadEnv() {
 const E = loadEnv();
 const S3_BUCKET = E.S3_BUCKET_NAME || 'auto-apply-aditya-mittha';
 const AWS_REGION = E.AWS_REGION || process.env.AWS_REGION || 'ap-south-1';
+if (!process.env.AWS_PROFILE && !E.AWS_ACCESS_KEY_ID) {
+  process.env.AWS_PROFILE = E.DEPLOY_PROFILE || 'auto-apply';
+}
 
 let s3Client = null;
 

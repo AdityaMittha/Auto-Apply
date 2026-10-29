@@ -10,6 +10,7 @@ const fs = require('fs');
 const path = require('path');
 const { execSync } = require('child_process');
 const { tailorFullResume } = require('./gemini-ai');
+const { panelCritique, formatPanelInstructions } = require('./hiring-panel-engine');
 const { CV, geminiKey, aiConfig } = require('./config');
 const { uploadFile, getPresignedDownloadUrl, S3_BUCKET } = require('./s3-storage');
 
@@ -154,9 +155,24 @@ async function tailorAndCompileResume({
   let isTailored = false;
   let aiResult = null;
 
-  // Full AI Tailoring with Anti-AI Footprint Guardrails
+  // Full AI Tailoring with Panel-Powered Critique
   if (aiConfig.enabled && jdText && jdText.length > 20) {
     try {
+      // Step 1: Run 7-reviewer hiring panel to identify what's weak in this resume for this JD
+      let panelInstructions = '';
+      try {
+        const panelFindings = await panelCritique({
+          resumeText: texContent,   // use raw .tex as resume text (readable enough for AI)
+          jobTitle,
+          jdText,
+          apiKey,
+        });
+        panelInstructions = formatPanelInstructions(panelFindings);
+      } catch {
+        // Panel failed — proceed without it
+      }
+
+      // Step 2: Tailor resume using panel findings as targeted fix instructions
       aiResult = await tailorFullResume({
         title: jobTitle,
         jdText,
@@ -164,6 +180,7 @@ async function tailorAndCompileResume({
         category: normCategory,
         cv,
         apiKey,
+        panelInstructions,
       });
 
       if (aiResult && aiResult.summary && aiResult.summary.length > 30) {
@@ -273,7 +290,9 @@ async function tailorAndCompileResume({
 module.exports = {
   tailorAndCompileResume,
   escapeLatex,
+  extractSummaryFromTex,
   getLatexEngine,
+  BASE_TEX_FILES,
   STATIC_PDFS,
   TAILORED_DIR,
 };

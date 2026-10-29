@@ -261,7 +261,7 @@ function sleep(ms) {
                 let externalUrl = null;
                 let isExternal = false;
 
-                // 1. Inspect React Fiber tree for jobDetails (companyApplyUrl / applyRedirectUrl)
+                // 1. Inspect React Fiber tree for jobDetails (prioritize direct external URL)
                 const root = document.getElementById('root');
                 if (root) {
                   const fiberKey = Object.keys(root).find(k => k.startsWith('__reactFiber'));
@@ -273,8 +273,17 @@ function sleep(ms) {
                       visited.add(f);
                       if (f.memoizedProps && f.memoizedProps.jobDetails) {
                         const jd = f.memoizedProps.jobDetails;
-                        if (jd.companyApplyUrl || jd.applyRedirectUrl) {
-                          externalUrl = jd.companyApplyUrl || jd.applyRedirectUrl;
+                        if (jd.applyRedirectUrl && !jd.applyRedirectUrl.includes('naukri.com')) {
+                          externalUrl = jd.applyRedirectUrl;
+                          isExternal = true;
+                        } else if (jd.externalApplyUrl && !jd.externalApplyUrl.includes('naukri.com')) {
+                          externalUrl = jd.externalApplyUrl;
+                          isExternal = true;
+                        } else if (jd.companyApplyUrl && !jd.companyApplyUrl.includes('naukri.com')) {
+                          externalUrl = jd.companyApplyUrl;
+                          isExternal = true;
+                        } else if (jd.applyRedirectUrl || jd.companyApplyUrl) {
+                          externalUrl = jd.applyRedirectUrl || jd.companyApplyUrl;
                           isExternal = true;
                         }
                       }
@@ -290,8 +299,12 @@ function sleep(ms) {
                   for (const k of Object.keys(window)) {
                     if ((k.includes('STATE') || k.includes('DATA')) && window[k] && window[k].jobDetails) {
                       const jd = window[k].jobDetails;
-                      if (jd.companyApplyUrl || jd.applyRedirectUrl) {
-                        externalUrl = jd.companyApplyUrl || jd.applyRedirectUrl;
+                      if (jd.applyRedirectUrl && !jd.applyRedirectUrl.includes('naukri.com')) {
+                        externalUrl = jd.applyRedirectUrl;
+                        isExternal = true;
+                        break;
+                      } else if (jd.companyApplyUrl || jd.applyRedirectUrl) {
+                        externalUrl = jd.applyRedirectUrl || jd.companyApplyUrl;
                         isExternal = true;
                         break;
                       }
@@ -299,11 +312,13 @@ function sleep(ms) {
                   }
                 }
 
-                // 3. Inspect Apply button text / attributes
-                const btn = document.querySelector('#apply-button, button.apply-button, button[class*="apply"]');
+                // 3. Inspect Apply / Company Site button text / attributes
+                const btn = document.querySelector(
+                  '#company-site-button, button#company-site-button, .company-site-button, [class*="company-site-button"], #apply-button, button.apply-button, button[class*="apply"]'
+                );
                 if (btn) {
                   const btnText = btn.innerText || btn.textContent || '';
-                  if (/company site|external|apply on/i.test(btnText)) {
+                  if (/company site|external|apply on/i.test(btnText) || btn.id === 'company-site-button') {
                     isExternal = true;
                   }
                 }
@@ -315,20 +330,70 @@ function sleep(ms) {
                 log(`   ℹ️ External Job (Redirects to company portal: ${applyMeta.externalUrl ? applyMeta.externalUrl.slice(0, 50) + '...' : 'Company Portal'}). Launching AI Career Page Engine...`);
                 let externalPage = null;
                 try {
-                  if (applyMeta.externalUrl && !applyMeta.externalUrl.includes('naukri.com')) {
-                    externalPage = await ctx.newPage();
-                    await externalPage.goto(applyMeta.externalUrl, { waitUntil: 'domcontentloaded', timeout: 40000 });
-                  } else {
-                    const popupPromise = ctx.waitForEvent('page', { timeout: 10000 }).catch(() => null);
-                    const extBtn = jobPage.locator('#apply-button, button.apply-button, button[class*="apply"]').first();
-                    if (await extBtn.isVisible().catch(() => false)) {
-                      await extBtn.click();
-                      externalPage = await popupPromise;
+                  const extBtnSelector = '#company-site-button, button#company-site-button, button:has-text("Apply on company site"), a:has-text("Apply on company site"), .company-site-button, [class*="company-site-button"], button:has-text("Apply on Company Website"), #apply-button, button.apply-button';
+                  const extBtn = jobPage.locator(extBtnSelector).first();
+
+                  // 1. Try clicking the "Apply on company site" button to trigger popup
+                  if (await extBtn.isVisible().catch(() => false)) {
+                    const popupPromise = ctx.waitForEvent('page', { timeout: 12000 }).catch(() => null);
+                    await extBtn.click();
+                    externalPage = await popupPromise;
+                  }
+
+                  // 2. If popup opened, wait for it to settle/redirect
+                  if (externalPage) {
+                    await externalPage.waitForLoadState('domcontentloaded', { timeout: 25000 }).catch(() => {});
+                    await sleep(2500);
+                  }
+
+                  // 3. If no popup opened or popup remained on internal naukri gateway, navigate directly
+                  if (!externalPage || externalPage.url().includes('naukri.com')) {
+                    const targetDirectUrl = (applyMeta.externalUrl && !applyMeta.externalUrl.includes('naukri.com'))
+                      ? applyMeta.externalUrl
+                      : (applyMeta.externalUrl || null);
+
+                    if (targetDirectUrl) {
+                      if (!externalPage || externalPage === jobPage) {
+                        externalPage = await ctx.newPage();
+                      }
+                      log(`   🌐 Navigating directly to external company URL: ${targetDirectUrl}`);
+                      await externalPage.goto(targetDirectUrl, { waitUntil: 'domcontentloaded', timeout: 40000 });
+                      await sleep(2500);
                     }
-                    if (!externalPage) {
-                      await jobPage.waitForTimeout(3000);
-                      externalPage = jobPage;
-                    }
+                  }
+
+                  // Guard: ensure externalPage is valid and not the original Naukri listing page
+                  if (!externalPage || externalPage === jobPage || externalPage.url().includes('naukri.com/job-listings')) {
+                    log(`   ⚠️ Could not establish session on external company career page.`);
+                    appliedDb.applied.push({
+                      jobId: job.jobId,
+                      title: job.title,
+                      company: job.company,
+                      portal: 'Naukri (Company Site)',
+                      url: job.url,
+                      externalUrl: applyMeta.externalUrl || job.url,
+                      location: job.location,
+                      category: analysis.category,
+                      resumeUsed: analysis.resumeName,
+                      tailoredResumePath: analysis.tailoredResumePath || analysis.selectedResume,
+                      s3Url: analysis.s3Url || null,
+                      s3Key: analysis.s3Key || null,
+                      isTailored: analysis.isTailored || false,
+                      matchScore: analysis.matchScore,
+                      matchedSkills: analysis.matchedSkills || [],
+                      missingSkills: analysis.missingSkills || [],
+                      aiReasoning: analysis.reasoning || '',
+                      interviewTips: analysis.interviewTips || [],
+                      highlightedSkills: analysis.highlightedSkills || [],
+                      tailoredSummary: analysis.tailoredSummary || '',
+                      jobDescription: (fullJd || '').slice(0, 3000),
+                      appliedAt: new Date().toISOString(),
+                      status: 'EXTERNAL_MANUAL_REQUIRED',
+                      reason: 'External company redirect failed to open',
+                    });
+                    appliedUrls.add(job.url);
+                    saveAppliedJobs(appliedDb);
+                    continue;
                   }
 
                   const extRes = await applyToCareerPage(externalPage, job, analysis, {
@@ -344,7 +409,7 @@ function sleep(ms) {
                     company: job.company,
                     portal: `Naukri (${extRes.atsProvider || 'Company Site'})`,
                     url: job.url,
-                    externalUrl: extRes.submissionUrl || applyMeta.externalUrl || job.url,
+                    externalUrl: extRes.submissionUrl || externalPage.url() || applyMeta.externalUrl || job.url,
                     location: job.location,
                     category: analysis.category,
                     resumeUsed: analysis.resumeName,
@@ -363,6 +428,7 @@ function sleep(ms) {
                     appliedAt: new Date().toISOString(),
                     status: extRes.status || 'APPLIED',
                     reason: extRes.reason || null,
+                    recruiterEmail: extRes.recruiterEmail || null,
                   });
                   appliedUrls.add(job.url);
                   saveAppliedJobs(appliedDb);

@@ -20,9 +20,9 @@ function callGemini(prompt, apiKey, opts = {}) {
   const {
     maxTokens = 2048,
     temperature = 0.2,
-    timeoutMs = 15000,
+    timeoutMs = 45000,
     retries = 1,
-    model = process.env.GEMINI_MODEL || 'gemini-2.0-flash',
+    model = process.env.GEMINI_MODEL || 'gemini-3.8-flash',
   } = opts;
 
   if (!apiKey || apiKey.trim().length < 10) {
@@ -56,12 +56,14 @@ function callGemini(prompt, apiKey, opts = {}) {
             try {
               const parsed = JSON.parse(data);
               if (parsed.error) {
-                // If model not found or quota error, resolve null to allow fallback
+                // If model not found (404), quota error (429), or unavailable (503), resolve null to allow fallback
                 resolve(null);
                 return;
               }
               const parts = parsed.candidates?.[0]?.content?.parts || [];
-              const textObj = parts.find(p => p.text && typeof p.text === 'string') || parts[0];
+              // Filter out internal thinking/thought tokens if model has thinking enabled
+              const nonThought = parts.filter(p => !p.thought && p.text);
+              const textObj = nonThought.length > 0 ? nonThought[nonThought.length - 1] : parts.find(p => p.text);
               const text = textObj?.text?.trim();
               resolve(text || null);
             } catch {
@@ -81,14 +83,17 @@ function callGemini(prompt, apiKey, opts = {}) {
     });
   }
 
-  // Attempt with primary model, fallback to gemini-1.5-flash if needed
-  return makeRequest(model).then((res) => {
-    if (res !== null) return res;
-    if (model !== 'gemini-1.5-flash') {
-      return makeRequest('gemini-1.5-flash');
+  // Fallback chain: requested model -> gemini-3.8-flash -> gemini-3.6-flash -> gemini-3.1-flash-lite
+  const fallbackModels = [model, 'gemini-3.8-flash', 'gemini-3.6-flash', 'gemini-3.1-flash-lite']
+    .filter((m, idx, arr) => arr.indexOf(m) === idx);
+
+  return (async () => {
+    for (const target of fallbackModels) {
+      const res = await makeRequest(target);
+      if (res !== null) return res;
     }
     return null;
-  });
+  })();
 }
 
 /**
@@ -182,6 +187,7 @@ Scoring guidelines:
       const raw = await callGemini(prompt, apiKey, {
         maxTokens: 1500,
         temperature: 0.15,
+        model: 'gemini-3.6-flash',   // efficient multi-step classification
       });
       if (raw) {
         const result = extractJson(raw);
@@ -282,6 +288,7 @@ Answer directly — no explanations, no quotes around the answer, no preamble.`;
     const raw = await callGemini(prompt, apiKey, {
       maxTokens: 1000,
       temperature: 0.2,
+      model: 'gemini-3.5-flash-lite', // fast, cost-effective for screening Q&A
     });
     if (!raw) return null;
 
@@ -320,7 +327,7 @@ Answer directly — no explanations, no quotes around the answer, no preamble.`;
  * @param {object} params - { title, jdText, currentSummary, category, cv, apiKey }
  * @returns {Promise<{ summary: string, highlightedSkills: string[], projectFocus: string }|null>}
  */
-async function tailorFullResume({ title = '', jdText = '', currentSummary = '', category = 'embedded', cv = {}, apiKey = '' }) {
+async function tailorFullResume({ title = '', jdText = '', currentSummary = '', category = 'embedded', cv = {}, apiKey = '', panelInstructions = '' }) {
   const cvContext = formatCVContext(cv);
   const truncatedJD = jdText.length > 2000 ? jdText.substring(0, 2000) + '...' : jdText;
 
@@ -346,7 +353,9 @@ STRICT WRITING RULES TO AVOID AI FOOTPRINTS:
    BANNED WORDS: "spearheaded", "testament", "delve", "tapestry", "foster", "synergy", "cutting-edge", "multifaceted", "holistic", "dynamic landscape", "passionate", "thrilled", "esteemed", "proven track record", "demonstrated aptitude", "harnessing", "unwavering".
 2. Use active, direct engineer phrasing: "Built", "Engineered", "Implemented", "Configured", "Debugged", "Integrated", "Developed".
 3. Ground all bullet points in real metrics and tools.
-
+${panelInstructions ? `
+${panelInstructions}
+` : ''}
 Respond ONLY with valid JSON (no markdown, no code fences):
 {
   "summary": "<2-3 sentence punchy humanized summary tailored to the JD>",
@@ -366,6 +375,7 @@ Respond ONLY with valid JSON (no markdown, no code fences):
     const raw = await callGemini(prompt, apiKey, {
       maxTokens: 2048,
       temperature: 0.2,
+      model: 'gemini-3.8-flash',   // long-horizon agent — best for structured rewrite
     });
     if (raw) {
       const result = extractJson(raw);
@@ -467,6 +477,7 @@ STRICT RULES (Zero AI Footprints):
       const raw = await callGemini(prompt, apiKey, {
         maxTokens: 1024,
         temperature: 0.25,
+        model: 'gemini-3.6-flash',   // good writing quality, fast
       });
       if (raw && raw.length > 50) {
         return raw.replace(/^["']|["']$/g, '').trim();
@@ -569,7 +580,7 @@ Answer directly with zero extra commentary:`;
 
   if (apiKey) {
     try {
-      const raw = await callGemini(prompt, apiKey, { maxTokens: 500, temperature: 0.15 });
+      const raw = await callGemini(prompt, apiKey, { maxTokens: 500, temperature: 0.15, model: 'gemini-3.5-flash-lite' }); // fast field resolver
       if (raw) {
         let cleaned = raw.trim().replace(/^["']|["']$/g, '');
         if (options.length > 0) {

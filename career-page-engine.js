@@ -1,23 +1,26 @@
 /**
  * Autonomous Career Page Application Engine — Enhanced Multi-Step ATS Suite
  *
- * Handles external company career portals and ATS systems:
+ * Handles external company career portals, ATS systems, and direct HR application pages:
  * - Greenhouse, Lever, Ashby, Workday, SmartRecruiters, BambooHR, Jobvite, Zoho Recruit,
  *   Oracle Taleo, SAP SuccessFactors, iCIMS, Breezy HR, Recruitee, and custom career portals.
+ * - Direct HR Email Applications (mailto:hr@company.com) with automated tailored email & resume attachment.
  *
  * Capabilities:
  * 1. Multi-step form traversal (Step 1 -> Step 2 -> Review -> Submit)
- * 2. Deep DOM inspection (standard inputs, custom textareas, dropdowns, radios, file uploads)
- * 3. Autofills personal profile data from CV Factbase
- * 4. Dynamically answers custom screening & essay questions using Gemini AI
- * 5. Attaches tailored LaTeX PDF resumes (including hidden and dropzone file inputs)
- * 6. Checks compliance / privacy consent checkboxes
- * 7. Strictly verifies application submission receipts before recording APPLIED status
+ * 2. Cookie / GDPR banner auto-dismissal
+ * 3. Deep DOM inspection (standard inputs, custom textareas, dropdowns, radios, file uploads)
+ * 4. Direct HR Email Application detection & automated tailored email dispatch
+ * 5. Autofills personal profile data from CV Factbase
+ * 6. Dynamically answers custom screening & essay questions using Gemini AI
+ * 7. Attaches tailored LaTeX PDF resumes (including hidden and dropzone file inputs)
+ * 8. Checks compliance / privacy consent checkboxes
+ * 9. Strictly verifies application submission receipts before recording APPLIED status
  */
 
 const fs = require('fs');
 const path = require('path');
-const { answerCareerPageField, generateCoverLetter } = require('./gemini-ai');
+const { answerCareerPageField, generateCoverLetter, callGemini } = require('./gemini-ai');
 
 /**
  * Detects the ATS provider or application form type on the page.
@@ -45,6 +48,202 @@ async function detectAtsProvider(page) {
 }
 
 /**
+ * Auto-dismisses common cookie and GDPR consent banners that overlay page content.
+ * @param {import('playwright-core').Page} page
+ */
+async function dismissCookieBanners(page) {
+  try {
+    const cookieSelectors = [
+      '#onetrust-accept-btn-handler',
+      '#onetrust-reject-all-handler',
+      'button[id*="cookie-accept"]',
+      'button[id*="accept-cookie"]',
+      'button:has-text("Accept all cookies")',
+      'button:has-text("Accept All")',
+      'button:has-text("Accept all")',
+      'button:has-text("Accept Cookies")',
+      'button:has-text("Accept cookies")',
+      'button:has-text("I Accept")',
+      'button:has-text("I accept")',
+      'button:has-text("Agree")',
+      'button:has-text("Accept")',
+      'button:has-text("Allow all")',
+      '.cc-allow',
+      '.cc-dismiss',
+      '#cookie-accept',
+      '[data-cookiebanner="accept_button"]',
+    ];
+    for (const sel of cookieSelectors) {
+      const btn = page.locator(sel).first();
+      if (await btn.isVisible().catch(() => false)) {
+        await btn.click().catch(() => {});
+        await page.waitForTimeout(500);
+        break;
+      }
+    }
+  } catch {}
+}
+
+/**
+ * Detects if the career page uses direct email applications (e.g. mailto:HRIndia@bhtc.com).
+ * @param {import('playwright-core').Page} page
+ * @returns {Promise<{ email: string, text: string } | null>}
+ */
+async function detectDirectHrEmail(page) {
+  try {
+    return await page.evaluate(() => {
+      // 1. Look for mailto: links
+      const mailtoLinks = Array.from(document.querySelectorAll('a[href^="mailto:"]')).map((a) => {
+        const href = a.getAttribute('href') || '';
+        const email = href.replace(/^mailto:/i, '').split('?')[0].trim();
+        const text = (a.innerText || a.textContent || '').trim();
+        return { email, text };
+      }).filter((m) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(m.email) && !m.email.toLowerCase().includes('example.com') && !m.email.toLowerCase().includes('w3.org'));
+
+      if (mailtoLinks.length > 0) {
+        // Prioritize links with HR / Apply keywords
+        const applyLink = mailtoLinks.find((m) =>
+          /apply|hr|career|job|talent|recruit|resumes|india/i.test(m.text) ||
+          /apply|hr|career|job|talent|recruit|resumes|india/i.test(m.email)
+        );
+        return applyLink || mailtoLinks[0];
+      }
+
+      // 2. Scan text for explicitly mentioned HR or careers emails
+      const bodyText = document.body.innerText;
+      const emailRegex = /([a-zA-Z0-9._%+-]+@(?!example\.com)[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/gi;
+      const matches = bodyText.match(emailRegex) || [];
+      const hrEmail = matches.find((e) => /hr|career|job|talent|recruit|resume/i.test(e));
+      if (hrEmail) {
+        return { email: hrEmail, text: 'Direct HR Email in Job Post' };
+      }
+
+      return null;
+    });
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Sends a direct formal application email to HR with tailored PDF resume attached.
+ * @param {string} email
+ * @param {object} job
+ * @param {object} analysis
+ * @param {object} opts
+ */
+async function sendDirectHrApplicationEmail(email, job, analysis, opts = {}) {
+  const { cv, geminiKey, dryRun = false, log = console.log } = opts;
+  const resumePath = analysis.tailoredResumePath || analysis.selectedResume;
+
+  const roleTitle = job.title || 'the open position';
+  const company = job.company || 'your team';
+
+  log(`   📧 Detected direct HR application email on career page: ${email}`);
+
+  // Generate tailored formal email body
+  let subject = `Application for ${roleTitle} — ${cv.name || 'Aditya Mittha'}`;
+  let body = `Dear Hiring Team,\n\nI am writing to apply for the ${roleTitle} position at ${company}. I am a final-year Electronics and Telecommunication Engineering student at Walchand Institute of Technology (9.27 CGPA) with hands-on proficiency in Embedded Systems, C, FreeRTOS, and Python.\n\nAttached is my tailored resume for your review. I would welcome the opportunity to discuss how my skill set aligns with your team's needs.\n\nBest regards,\n${cv.name || 'Aditya Mittha'}\nPhone: ${cv.phone || '+91 8010542551'}\nLinkedIn: ${cv.linkedin || 'linkedin.com/in/adityamittha'}\nGitHub: ${cv.github || 'github.com/AdityaMittha'}`;
+
+  if (geminiKey) {
+    try {
+      const prompt = `Write a concise, professional, and formal job application email to ${company} for the "${roleTitle}" position from candidate ${cv.name || 'Aditya Mittha'}.
+Candidate highlights: Walchand Institute of Technology (9.27 CGPA), hands-on projects in Embedded C/Python/IoT/FreeRTOS, tailored resume attached.
+Return ONLY JSON format with keys "subject" and "body".`;
+      const raw = await callGemini(prompt, geminiKey, { maxTokens: 400, temperature: 0.2 });
+      if (raw) {
+        const cleaned = raw.replace(/```json\s*/gi, '').replace(/```\s*/gi, '').trim();
+        const parsed = JSON.parse(cleaned);
+        if (parsed.subject && parsed.body) {
+          subject = parsed.subject;
+          body = parsed.body;
+        }
+      }
+    } catch {}
+  }
+
+  if (dryRun) {
+    log(`   🧪 [DRY RUN] Would send direct application email to ${email}:\n      Subject: ${subject}\n      Attachment: ${resumePath ? path.basename(resumePath) : 'None'}`);
+    return {
+      success: true,
+      status: 'PREVIEW_DRY_RUN',
+      atsProvider: `Direct HR Email (${email})`,
+      submissionUrl: `mailto:${email}`,
+      recruiterEmail: email,
+    };
+  }
+
+  // Load SMTP credentials
+  const envPath = path.join(__dirname, '.env');
+  let smtpUser = process.env.SMTP_USER || 'adityamittha09@gmail.com';
+  let smtpPass = process.env.SMTP_PASS || '';
+  if (fs.existsSync(envPath)) {
+    const content = fs.readFileSync(envPath, 'utf8');
+    const uMatch = content.match(/SMTP_USER\s*=\s*(.+)/);
+    const pMatch = content.match(/SMTP_PASS\s*=\s*(.+)/);
+    if (uMatch) smtpUser = uMatch[1].trim().replace(/^["']|["']$/g, '');
+    if (pMatch) smtpPass = pMatch[1].trim().replace(/^["']|["']$/g, '');
+  }
+
+  if (!smtpPass) {
+    log(`   ⚠️ SMTP_PASS not set in .env. Flagging for 1-click email dispatch to ${email}.`);
+    return {
+      success: false,
+      status: 'EXTERNAL_MANUAL_REQUIRED',
+      reason: `Direct email required: Send tailored resume to ${email}`,
+      atsProvider: `Direct HR Email (${email})`,
+      submissionUrl: `mailto:${email}`,
+      recruiterEmail: email,
+    };
+  }
+
+  try {
+    const nodemailer = require('nodemailer');
+    const transporter = nodemailer.createTransport({
+      service: 'gmail',
+      auth: {
+        user: smtpUser,
+        pass: smtpPass,
+      },
+    });
+
+    const mailOptions = {
+      from: `"${cv.name || 'Aditya Mittha'}" <${smtpUser}>`,
+      to: email,
+      subject,
+      text: body,
+      attachments: resumePath && fs.existsSync(resumePath) ? [
+        {
+          filename: `${(cv.name || 'Aditya_Mittha').replace(/\s+/g, '_')}_Resume.pdf`,
+          path: resumePath,
+          contentType: 'application/pdf',
+        }
+      ] : [],
+    };
+
+    const info = await transporter.sendMail(mailOptions);
+    log(`   🎉 Direct application email sent successfully to ${email} (MessageId: ${info.messageId})!`);
+    return {
+      success: true,
+      status: 'APPLIED',
+      atsProvider: `Direct HR Email (${email})`,
+      submissionUrl: `mailto:${email}`,
+      recruiterEmail: email,
+    };
+  } catch (err) {
+    log(`   ⚠️ Failed to dispatch direct HR email: ${err.message}`);
+    return {
+      success: false,
+      status: 'EXTERNAL_MANUAL_REQUIRED',
+      reason: `Email dispatch error: Send resume to ${email}`,
+      atsProvider: `Direct HR Email (${email})`,
+      submissionUrl: `mailto:${email}`,
+      recruiterEmail: email,
+    };
+  }
+}
+
+/**
  * Fills current visible form fields on the active page step.
  * @param {import('playwright-core').Page} page
  * @param {object} job
@@ -57,7 +256,7 @@ async function fillCurrentFormStep(page, job, analysis, opts = {}) {
   const resumePath = analysis.tailoredResumePath || analysis.selectedResume;
   let filledCount = 0;
 
-  // 1. Resume / CV File Upload (if file inputs exist on this step)
+  // 1. Resume / CV File Upload (handles visible and hidden dropzone file inputs)
   const fileInputs = await page.$$('input[type="file"], input[accept*="pdf"], input[accept*="doc"]');
   if (fileInputs.length > 0 && resumePath && fs.existsSync(resumePath)) {
     for (const fi of fileInputs) {
@@ -243,7 +442,58 @@ async function fillCurrentFormStep(page, job, analysis, opts = {}) {
     } catch {}
   }
 
-  // 5. Handle Consent & Compliance Checkboxes
+  // 5. Handle Radios (Work auth, sponsorship, relocation, gender)
+  const radioGroups = await page.$$('input[type="radio"]');
+  const seenNames = new Set();
+  for (const radio of radioGroups) {
+    try {
+      const name = await radio.evaluate((r) => r.name);
+      if (!name || seenNames.has(name)) continue;
+      seenNames.add(name);
+
+      const groupInfo = await page.evaluate((groupName) => {
+        const radios = Array.from(document.querySelectorAll(`input[type="radio"][name="${groupName}"]`));
+        const parentText = radios[0]?.closest('.form-group, fieldset, div[class*="field"], div[class*="group"]')?.innerText || '';
+        const options = radios.map((r) => ({
+          value: r.value,
+          id: r.id,
+          label: (r.id ? document.querySelector(`label[for="${r.id}"]`)?.innerText : '') || r.closest('label')?.innerText || r.value,
+        }));
+        return { parentText, options };
+      }, name);
+
+      const descriptor = groupInfo.parentText.toLowerCase();
+      // Authorized to work in country / India
+      if (descriptor.includes('authorized') || descriptor.includes('eligible to work') || descriptor.includes('right to work')) {
+        const yesOpt = groupInfo.options.find((o) => /^yes/i.test(o.label));
+        if (yesOpt && yesOpt.id) {
+          await page.click(`#${yesOpt.id}`).catch(() => {});
+          log(`      🔘 Selected Radio: [Authorized to work -> Yes]`);
+          filledCount++;
+        }
+      }
+      // Require sponsorship / visa
+      else if (descriptor.includes('sponsorship') || descriptor.includes('visa')) {
+        const noOpt = groupInfo.options.find((o) => /^no/i.test(o.label));
+        if (noOpt && noOpt.id) {
+          await page.click(`#${noOpt.id}`).catch(() => {});
+          log(`      🔘 Selected Radio: [Require Sponsorship -> No]`);
+          filledCount++;
+        }
+      }
+      // Relocation
+      else if (descriptor.includes('relocate') || descriptor.includes('relocation')) {
+        const yesOpt = groupInfo.options.find((o) => /^yes/i.test(o.label));
+        if (yesOpt && yesOpt.id) {
+          await page.click(`#${yesOpt.id}`).catch(() => {});
+          log(`      🔘 Selected Radio: [Willing to relocate -> Yes]`);
+          filledCount++;
+        }
+      }
+    } catch {}
+  }
+
+  // 6. Handle Consent & Compliance Checkboxes
   const checkboxes = await page.$$('input[type="checkbox"]');
   for (const cb of checkboxes) {
     try {
@@ -318,20 +568,46 @@ async function checkSubmissionConfirmation(page) {
  * @param {object} job - { title, company, url }
  * @param {object} analysis - Tailoring analysis output with tailoredResumePath
  * @param {object} opts - { cv, geminiKey, dryRun, log }
- * @returns {Promise<{ success: boolean, status: string, reason?: string, atsProvider?: string, submissionUrl?: string }>}
+ * @returns {Promise<{ success: boolean, status: string, reason?: string, atsProvider?: string, submissionUrl?: string, recruiterEmail?: string }>}
  */
 async function applyToCareerPage(page, job, analysis, opts = {}) {
   const { cv, geminiKey, dryRun = false, log = console.log } = opts;
 
   try {
+    const currentUrl = page.url();
+    if (!currentUrl || currentUrl.includes('naukri.com/job-listings') || currentUrl.includes('naukri.com/mnjuser')) {
+      log(`   ⚠️ Career engine called on portal listing URL instead of external site.`);
+      return {
+        success: false,
+        status: 'EXTERNAL_MANUAL_REQUIRED',
+        reason: 'External company redirect failed to open',
+        submissionUrl: currentUrl,
+      };
+    }
+
     log(`   🌐 [CAREER-ENGINE] Inspecting career application page: ${page.url()}`);
     await page.waitForLoadState('domcontentloaded', { timeout: 20000 }).catch(() => {});
-    await page.waitForTimeout(2500);
+    await page.waitForTimeout(2000);
+
+    // Auto-dismiss cookie & GDPR consent popups that block interaction
+    await dismissCookieBanners(page);
+
+    // Check for direct email applications (e.g. mailto:HRIndia@bhtc.com)
+    const directEmail = await detectDirectHrEmail(page);
+    const hasWebFormInputs = await page.evaluate(() => {
+      const inputs = document.querySelectorAll('input[type="text"], input[type="email"], input[type="file"], textarea');
+      return inputs.length > 0;
+    });
+
+    if (directEmail && !hasWebFormInputs) {
+      log(`   ✉️ Career page directs applications via HR Email (${directEmail.email}). Triggering direct email dispatcher...`);
+      return await sendDirectHrApplicationEmail(directEmail.email, job, analysis, { cv, geminiKey, dryRun, log });
+    }
 
     const atsProvider = await detectAtsProvider(page);
     log(`   🏢 Detected ATS / Platform: ${atsProvider}`);
 
-    // If an initial "Apply" / "Apply Now" button needs to be clicked to open the form
+    // If an initial "Apply" / "Apply Now" button needs to be clicked to reveal the form
     const landingApplyBtn = page
       .locator(
         'a:has-text("Apply for this job"), a:has-text("Apply Now"), button:has-text("Apply for this job"), button:has-text("Apply Now"), button#apply-button, a[href*="#apply"]'
@@ -341,6 +617,7 @@ async function applyToCareerPage(page, job, analysis, opts = {}) {
       log(`   🔘 Clicking initial "Apply" trigger to reveal form...`);
       await landingApplyBtn.click().catch(() => {});
       await page.waitForTimeout(2000);
+      await dismissCookieBanners(page);
     }
 
     // Check for login / CAPTCHA wall that strictly requires manual credentials
@@ -378,7 +655,7 @@ async function applyToCareerPage(page, job, analysis, opts = {}) {
 
     for (let step = 1; step <= MAX_STEPS; step++) {
       log(`   📝 [Step ${step}] Populating active form fields...`);
-      await fillCurrentFormStep(page, job, analysis, { cv, geminiKey, log });
+      const filled = await fillCurrentFormStep(page, job, analysis, { cv, geminiKey, log });
       await page.waitForTimeout(1500);
 
       if (dryRun) {
@@ -455,6 +732,12 @@ async function applyToCareerPage(page, job, analysis, opts = {}) {
     }
 
     if (!finalSubmitted) {
+      // If we found a direct email on the page earlier, use it as fallback
+      if (directEmail) {
+        log(`   ✉️ Form submission inconclusive; falling back to direct HR Email (${directEmail.email})...`);
+        return await sendDirectHrApplicationEmail(directEmail.email, job, analysis, { cv, geminiKey, dryRun, log });
+      }
+
       log(`   ⚠️ Could not reach verified final submission on career page. Flagging for 1-click manual review.`);
       return {
         success: false,
@@ -477,6 +760,9 @@ async function applyToCareerPage(page, job, analysis, opts = {}) {
 
 module.exports = {
   detectAtsProvider,
+  dismissCookieBanners,
+  detectDirectHrEmail,
+  sendDirectHrApplicationEmail,
   applyToCareerPage,
   fillCurrentFormStep,
   checkSubmissionConfirmation,
