@@ -25,6 +25,9 @@ if (Test-Path "$repo\public") {
 if (Test-Path "$repo\docs") {
     scp -o StrictHostKeyChecking=no -r -i $KEY_FILE "$repo\docs" "${EC2_USER}@${EC2_IP}:${REMOTE_DIR}/"
 }
+if (Test-Path "$repo\.agents") {
+    scp -o StrictHostKeyChecking=no -r -i $KEY_FILE "$repo\.agents" "${EC2_USER}@${EC2_IP}:${REMOTE_DIR}/"
+}
 
 # 2. Resumes
 Write-Host "`n[2/5] Uploading resumes..." -ForegroundColor Yellow
