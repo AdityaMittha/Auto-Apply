@@ -3,7 +3,7 @@
 % Author: Aditya Mittha
 %-------------------------
 
-\documentclass[letterpaper,10.5pt]{article}
+\documentclass[letterpaper,10pt]{article}
 
 \usepackage[utf8]{inputenc}
 \usepackage[T1]{fontenc}
@@ -29,13 +29,29 @@
 
 % Section formatting — clean, ATS-parseable
 \titleformat{\section}{
-  \vspace{-10pt}\bfseries\large\scshape\raggedright
-}{}{0em}{}[\color{black}\titlerule\vspace{-6pt}]
+  \vspace{-8pt}\bfseries\large\scshape\raggedright
+}{}{0em}{}[\color{black}\titlerule\vspace{-5pt}]
 
 % Bullet list settings
 \newcommand{\resumeItemListStart}{\begin{itemize}[leftmargin=0.18in, topsep=1.5pt, parsep=0pt, itemsep=1pt]}
-\newcommand{\resumeItemListEnd}{\end{itemize}\vspace{-5pt}}
+\newcommand{\resumeItemListEnd}{\end{itemize}\vspace{-4pt}}
 \newcommand{\resumeItem}[1]{\item\small{#1}}
+
+% Subheading macros for guaranteed right-aligned dates & metadata
+\newcommand{\resumeSubheading}[4]{
+  \vspace{-1pt}
+  \begin{tabular*}{\textwidth}[t]{l@{\extracolsep{\fill}}r}
+    \textbf{#1} & #2 \\
+    \textit{\small#3} & \textit{\small #4} \\
+  \end{tabular*}\vspace{-4pt}
+}
+
+\newcommand{\resumeProjectHeading}[2]{
+  \vspace{-1pt}
+  \begin{tabular*}{\textwidth}[t]{l@{\extracolsep{\fill}}r}
+    \textbf{#1} & #2 \\
+  \end{tabular*}\vspace{-4pt}
+}
 
 %-------------------------------------------
 \begin{document}
@@ -51,7 +67,7 @@
   Solapur, India
 \end{center}
 
-\vspace{-15pt}
+\vspace{-14pt}
 
 %-----------SUMMARY-----------
 \section{Summary}
@@ -72,24 +88,24 @@ Final-year Electronics and Telecommunication engineering student (9.27 CGPA) wit
   \item \textbf{Soft Skills:} Analytical Debugging, Systems Architecture, Clean Code Practices, Cross-Functional Collaboration
 \end{itemize}
 
-\vspace{-8pt}
+\vspace{-6pt}
 
 %-----------EDUCATION-----------
 \section{Education}
-\textbf{Bachelor's Degree in Electronics and Telecommunication} \hfill 2027 \\
-\textit{Walchand Institute Of Technology} \hfill CGPA: 9.27
+\resumeSubheading
+  {Bachelor's Degree in Electronics and Telecommunication}{2027}
+  {Walchand Institute Of Technology}{CGPA: 9.27}
+\resumeSubheading
+  {Higher Schooling}{2023}
+  {D.H.B Soni College, Solapur}{Percentage: 83\%}
 
-\vspace{1pt}
-
-\textbf{Higher Schooling} \hfill 2023 \\
-\textit{D.H.B Soni College, Solapur} \hfill Percentage: 83\%
-
-\vspace{-3pt}
+\vspace{-2pt}
 
 %-----------WORK EXPERIENCE-----------
 \section{Work Experience}
-\textbf{Embedded Software Developer Intern} \hfill May 2025 -- June 2025 \\
-\textit{Codec Technologies India} \hfill \textit{Remote}
+\resumeSubheading
+  {Embedded Software Developer Intern}{May 2025 -- June 2025}
+  {Codec Technologies India}{Remote}
 \resumeItemListStart
   \resumeItem{Authored modular, driver-level Embedded C firmware for UART and I\textsuperscript{2}C communication peripherals, integrating circular ring buffers that eliminated packet loss.}
   \resumeItem{Programmed Hardware Abstraction Layer (HAL) routines and Interrupt Service Routines (ISRs) on microcontrollers for synchronized, low-latency sensor data acquisition.}
@@ -98,12 +114,13 @@ Final-year Electronics and Telecommunication engineering student (9.27 CGPA) wit
 \resumeItemListEnd
 \small{\textbf{Technologies:} Embedded C, UART, I\textsuperscript{2}C, ISRs, HAL, Logic Analyzer, Git, Linux}
 
-\vspace{-3pt}
+\vspace{-2pt}
 
 %-----------PROJECTS-----------
 \section{Projects}
 
-\textbf{\href{https://github.com/AdityaMittha/AQUANOVA}{AQUANOVA -- ESP32 Real-Time Firmware \& Telemetry Engine}} \hfill 2026
+\resumeProjectHeading
+  {\href{https://github.com/AdityaMittha/AQUANOVA}{\textbf{AQUANOVA -- ESP32 Real-Time Firmware \& Telemetry Engine}}}{2026}
 \resumeItemListStart
   \resumeItem{Architected multi-threaded FreeRTOS firmware on ESP32 managing non-blocking ADC/GPIO polling, queue-based IPC, and asynchronous MQTT telemetry dispatch.}
   \resumeItem{Designed resilient peripheral drivers with hardware watchdog timer monitoring and automatic reconnect state machines for robust network failover.}
@@ -112,9 +129,10 @@ Final-year Electronics and Telecommunication engineering student (9.27 CGPA) wit
 \small{\textbf{Role:} Embedded Software \& Firmware Lead (3-person team)} \\
 \small{\textbf{Tech Stack:} Embedded C, ESP32, FreeRTOS, MQTT, I\textsuperscript{2}C, ADC, Watchdog Timer, Python, Git}
 
-\vspace{4pt}
+\vspace{3pt}
 
-\textbf{\href{https://github.com/AdityaMittha/LabPulse}{LabPulse -- Embedded Telemetry Agent \& Interfacing System}} \hfill 2026
+\resumeProjectHeading
+  {\href{https://github.com/AdityaMittha/LabPulse}{\textbf{LabPulse -- Embedded Telemetry Agent \& Interfacing System}}}{2026}
 \resumeItemListStart
   \resumeItem{Developed a modular telemetry agent service in Python to monitor peripheral hardware status, session states, and serial data streams with sub-1\% CPU overhead.}
   \resumeItem{Implemented secure REST API communication with SHA-256 validation to transmit device diagnostics to AWS serverless backends (Lambda, DynamoDB).}
@@ -123,7 +141,9 @@ Final-year Electronics and Telecommunication engineering student (9.27 CGPA) wit
 \small{\textbf{Role:} Backend Lead \& System Software Architecture} \\
 \small{\textbf{Tech Stack:} Python, Embedded Linux, REST APIs, AWS Lambda, DynamoDB, Docker, GitHub Actions}
 
-%-------------------------------------------
+\vspace{-2pt}
+
+%-----------REWARDS & ACHIEVEMENTS-----------
 \section{Rewards \& Achievements}
 \resumeItemListStart
   \resumeItem{2x Winner, National Electronic Quiz Competition (Quizotronics)}
@@ -131,11 +151,11 @@ Final-year Electronics and Telecommunication engineering student (9.27 CGPA) wit
   \resumeItem{Participated in 4\textsuperscript{+} Hackathons and Embedded Hardware Competitions}
 \resumeItemListEnd
 
-\vspace{-5pt}
-%-----------------
+\vspace{-4pt}
+
+%-----------LANGUAGES-----------
 \section{Languages}
 \small
 English \enspace $|$ \enspace Hindi \enspace $|$ \enspace Marathi \enspace $|$ \enspace Kannada
 
-%-------------------------------------------  
 \end{document}

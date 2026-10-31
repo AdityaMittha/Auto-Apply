@@ -1,8 +1,8 @@
 /**
  * Resume Compiler Module
  * 
- * Dynamically tailors the LaTeX resume Summary, Skills, and Projects per Job Description (JD),
- * compiles the customized LaTeX into a clean ATS-friendly PDF using pdflatex,
+ * Dynamically tailors the LaTeX resume Summary, Skills, Work Experience, and Projects per Job Description (JD),
+ * compiles the customized LaTeX into a clean, pixel-perfect ATS-friendly 1-page PDF using Tectonic or pdflatex,
  * uploads to Amazon S3, and generates secure pre-signed download URLs.
  */
 
@@ -39,20 +39,30 @@ if (!fs.existsSync(TAILORED_DIR)) {
 }
 
 /**
- * Escapes common LaTeX special characters in AI-generated text.
+ * Escapes common LaTeX special characters in AI-generated text without breaking existing LaTeX commands.
  * @param {string} text 
  * @returns {string}
  */
 function escapeLatex(text = '') {
   if (!text) return '';
-  return text
-    .replace(/\\/g, '\\textbackslash{}')
-    .replace(/([&%$#_{}])/g, '\\$1')
-    .replace(/~/g, '\\textasciitilde{}')
-    .replace(/\^/g, '\\textasciicircum{}')
-    .replace(/"([^"]*)"/g, "``$1''")
-    .replace(/---/g, '---')
-    .replace(/--/g, '--');
+  let s = String(text).trim();
+
+  // Standardize smart quotes and dashes first
+  s = s.replace(/[\u2018\u2019]/g, "'")
+       .replace(/[\u201C\u201D]/g, '"')
+       .replace(/[\u2013\u2014]/g, '--');
+
+  // Convert paired double quotes to LaTeX style `` ... ''
+  s = s.replace(/"([^"]*)"/g, "``$1''");
+
+  // Escape special LaTeX characters only if not already escaped
+  s = s.replace(/(?<!\\)&/g, '\\&');
+  s = s.replace(/(?<!\\)%/g, '\\%');
+  s = s.replace(/(?<!\\)\$/g, '\\$');
+  s = s.replace(/(?<!\\)_/g, '\\_');
+  s = s.replace(/(?<!\\)#/g, '\\#');
+
+  return s;
 }
 
 /**
@@ -66,23 +76,175 @@ function extractSummaryFromTex(texContent) {
 }
 
 /**
- * Checks if pdflatex or xelatex is available in system PATH.
- * @returns {string|null} 'pdflatex' | 'xelatex' | null
+ * Resolves available LaTeX compiler (bundled Tectonic, system tectonic, pdflatex, or xelatex).
+ * @returns {{ type: string, bin: string, compile: (texPath: string, outDir: string) => string }|null}
+ */
+function resolveLatexEngine() {
+  const binDir = path.join(__dirname, 'bin');
+  const localTectonicWin = path.join(binDir, 'tectonic.exe');
+  const localTectonicLinux = path.join(binDir, 'tectonic');
+
+  // 1. Project-bundled Tectonic (Windows)
+  if (process.platform === 'win32' && fs.existsSync(localTectonicWin)) {
+    return {
+      type: 'tectonic',
+      bin: `"${localTectonicWin}"`,
+      compile: (texPath, outDir) => `"${localTectonicWin}" "${texPath}" -o "${outDir}"`,
+    };
+  }
+
+  // 2. Project-bundled Tectonic (Linux)
+  if (process.platform !== 'win32' && fs.existsSync(localTectonicLinux)) {
+    return {
+      type: 'tectonic',
+      bin: `"${localTectonicLinux}"`,
+      compile: (texPath, outDir) => `"${localTectonicLinux}" "${texPath}" -o "${outDir}"`,
+    };
+  }
+
+  // 3. System Tectonic
+  try {
+    const checkCmd = process.platform === 'win32' ? 'where.exe tectonic' : 'which tectonic';
+    execSync(checkCmd, { stdio: 'ignore' });
+    return {
+      type: 'tectonic',
+      bin: 'tectonic',
+      compile: (texPath, outDir) => `tectonic "${texPath}" -o "${outDir}"`,
+    };
+  } catch {}
+
+  // 4. System pdflatex
+  try {
+    const checkCmd = process.platform === 'win32' ? 'where.exe pdflatex' : 'which pdflatex';
+    execSync(checkCmd, { stdio: 'ignore' });
+    return {
+      type: 'pdflatex',
+      bin: 'pdflatex',
+      compile: (texPath, outDir) => `pdflatex -interaction=nonstopmode -output-directory="${outDir}" "${texPath}"`,
+    };
+  } catch {}
+
+  // 5. System xelatex
+  try {
+    const checkCmd = process.platform === 'win32' ? 'where.exe xelatex' : 'which xelatex';
+    execSync(checkCmd, { stdio: 'ignore' });
+    return {
+      type: 'xelatex',
+      bin: 'xelatex',
+      compile: (texPath, outDir) => `xelatex -interaction=nonstopmode -output-directory="${outDir}" "${texPath}"`,
+    };
+  } catch {}
+
+  return null;
+}
+
+/**
+ * Checks if a LaTeX engine is available in system PATH or bundled.
+ * @returns {string|null} 'tectonic' | 'pdflatex' | 'xelatex' | null
  */
 function getLatexEngine() {
-  try {
-    const cmd = process.platform === 'win32' ? 'where.exe pdflatex' : 'which pdflatex';
-    execSync(cmd, { stdio: 'ignore' });
-    return 'pdflatex';
-  } catch {
-    try {
-      const cmd = process.platform === 'win32' ? 'where.exe xelatex' : 'which xelatex';
-      execSync(cmd, { stdio: 'ignore' });
-      return 'xelatex';
-    } catch {
-      return null;
+  const resolved = resolveLatexEngine();
+  return resolved ? resolved.type : null;
+}
+
+/**
+ * Replaces the Summary section in the LaTeX resume.
+ */
+function replaceSummarySection(texContent, tailoredSummary) {
+  if (!tailoredSummary || tailoredSummary.trim().length < 20) return texContent;
+  const escapedSummary = escapeLatex(tailoredSummary.trim());
+  return texContent.replace(
+    /(\\section\{Summary\}[\s\S]*?\\small\s*)([\s\S]*?)(\n\s*(?:\\vspace|\\section))/i,
+    `$1${escapedSummary}$3`
+  );
+}
+
+/**
+ * Injects prioritized keywords cleanly into the Skills section.
+ */
+function injectSkillsSection(texContent, highlightedSkills) {
+  if (!Array.isArray(highlightedSkills) || highlightedSkills.length === 0) return texContent;
+  return texContent.replace(
+    /(\\section\{Skills\}[\s\S]*?\\item\s*\\textbf\{[^:}]+\:\}\s*)([^\n]+)/i,
+    (match, prefix, existingSkills) => {
+      const existingLower = existingSkills.toLowerCase();
+      const toAdd = highlightedSkills
+        .filter(s => s && typeof s === 'string' && !existingLower.includes(s.toLowerCase().trim()))
+        .map(escapeLatex);
+      if (toAdd.length === 0) return match;
+      const addStr = toAdd.slice(0, 3).join(', ');
+      return `${prefix}${addStr}, ${existingSkills}`;
+    }
+  );
+}
+
+/**
+ * Replaces bullets in the Work Experience section.
+ */
+function replaceExperienceSection(texContent, experienceBullets) {
+  if (!Array.isArray(experienceBullets) || experienceBullets.length < 2) return texContent;
+  const expItems = experienceBullets
+    .slice(0, 4)
+    .map(b => `  \\resumeItem{${escapeLatex(b.trim())}}`)
+    .join('\n');
+  return texContent.replace(
+    /(\\section\{Work Experience\}[\s\S]*?\\resumeItemListStart)([\s\S]*?)(\\resumeItemListEnd)/i,
+    `$1\n${expItems}\n$3`
+  );
+}
+
+/**
+ * Replaces bullets in both Project 1 and Project 2 individually without crossing sections.
+ */
+function replaceProjectsSection(texContent, p1Bullets, p2Bullets) {
+  if ((!p1Bullets || p1Bullets.length === 0) && (!p2Bullets || p2Bullets.length === 0)) {
+    return texContent;
+  }
+
+  const projSectionIdx = texContent.indexOf('\\section{Projects}');
+  if (projSectionIdx === -1) return texContent;
+
+  const beforeProj = texContent.slice(0, projSectionIdx);
+  let afterProj = texContent.slice(projSectionIdx);
+  const nextSectionMatch = afterProj.slice('\\section{Projects}'.length).match(/\n\\section\{/);
+  const nextSectionIdx = nextSectionMatch 
+    ? '\\section{Projects}'.length + nextSectionMatch.index 
+    : afterProj.length;
+
+  let projBody = afterProj.slice(0, nextSectionIdx);
+  const remainingTex = afterProj.slice(nextSectionIdx);
+
+  // Find all \resumeItemListStart ... \resumeItemListEnd inside Projects
+  const listPositions = [];
+  const startRegex = /\\resumeItemListStart/g;
+  let m;
+  while ((m = startRegex.exec(projBody)) !== null) {
+    const sIdx = m.index;
+    const eIdx = projBody.indexOf('\\resumeItemListEnd', sIdx);
+    if (eIdx !== -1) {
+      listPositions.push({
+        contentStart: sIdx + '\\resumeItemListStart'.length,
+        end: eIdx,
+      });
     }
   }
+
+  // Replace Project 2 first (from back to front to preserve offsets)
+  if (listPositions.length >= 2 && Array.isArray(p2Bullets) && p2Bullets.length > 0) {
+    const p2Code = p2Bullets.map(b => `  \\resumeItem{${escapeLatex(b.trim())}}`).join('\n');
+    projBody = projBody.slice(0, listPositions[1].contentStart) + '\n' + p2Code + '\n' + projBody.slice(listPositions[1].end);
+  }
+
+  // Replace Project 1
+  if (listPositions.length >= 1 && Array.isArray(p1Bullets) && p1Bullets.length > 0) {
+    const p1Code = p1Bullets.map(b => `  \\resumeItem{${escapeLatex(b.trim())}}`).join('\n');
+    const p1EndIdx = projBody.indexOf('\\resumeItemListEnd', listPositions[0].contentStart);
+    if (p1EndIdx !== -1) {
+      projBody = projBody.slice(0, listPositions[0].contentStart) + '\n' + p1Code + '\n' + projBody.slice(p1EndIdx);
+    }
+  }
+
+  return beforeProj + projBody + remainingTex;
 }
 
 /**
@@ -92,7 +254,7 @@ function getLatexEngine() {
  * @param {string} params.jobId - Unique job identifier or clean title
  * @param {string} params.jobTitle - Job title
  * @param {string} params.jdText - Job description text
- * @param {string} params.category - 'embedded' | 'python_devops' | 'general'
+ * @param {string} params.category - 'embedded' | 'embedded_software' | 'python_devops' | 'data_analytics'
  * @param {object} [params.cv] - CV profile data
  * @param {string} [params.apiKey] - Gemini API Key
  * @returns {Promise<{ pdfPath: string, s3Key: string|null, s3Url: string|null, texPath: string|null, tailoredSummary: string, isTailored: boolean }>}
@@ -158,11 +320,11 @@ async function tailorAndCompileResume({
   // Full AI Tailoring with Panel-Powered Critique
   if (aiConfig.enabled && jdText && jdText.length > 20) {
     try {
-      // Step 1: Run 7-reviewer hiring panel to identify what's weak in this resume for this JD
+      // Step 1: Run hiring panel critique
       let panelInstructions = '';
       try {
         const panelFindings = await panelCritique({
-          resumeText: texContent,   // use raw .tex as resume text (readable enough for AI)
+          resumeText: texContent,
           jobTitle,
           jdText,
           apiKey,
@@ -193,7 +355,7 @@ async function tailorAndCompileResume({
     }
   }
 
-  const engine = getLatexEngine();
+  const engine = resolveLatexEngine();
   if (!engine) {
     // No compiler available on system, return static PDF
     return {
@@ -207,47 +369,42 @@ async function tailorAndCompileResume({
   }
 
   try {
+    let updatedTex = texContent;
+
     // 1. Replace summary section
-    const escapedSummary = escapeLatex(tailoredSummary);
-    let updatedTex = texContent.replace(
-      /(\\section\{Summary\}\s*(?:\\small\s*)?)([\s\S]*?)(?=\\vspace|\\section)/i,
-      `$1${escapedSummary}\n\n`
-    );
+    updatedTex = replaceSummarySection(updatedTex, tailoredSummary);
 
-    // 2. If highlighted skills are found, inject them prominently into skills section
-    if (highlightedSkills.length > 0) {
-      const skillsStr = highlightedSkills.map(escapeLatex).join(', ');
-      updatedTex = updatedTex.replace(
-        /(\\item\s*\\textbf\{(?:Core Skills|Programming Languages|Skills)\:\}\s*)([^\n]+)/i,
-        `$1${skillsStr}, $2`
-      );
+    // 2. Inject highlighted skills cleanly
+    updatedTex = injectSkillsSection(updatedTex, highlightedSkills);
+
+    // 3. Replace Work Experience bullets
+    if (aiResult && Array.isArray(aiResult.experienceBullets)) {
+      updatedTex = replaceExperienceSection(updatedTex, aiResult.experienceBullets);
     }
 
-    // 3. Replace Work Experience bullets if provided
-    if (aiResult && Array.isArray(aiResult.experienceBullets) && aiResult.experienceBullets.length >= 2) {
-      const expItems = aiResult.experienceBullets.map(b => `  \\resumeItem{${escapeLatex(b)}}`).join('\n');
-      updatedTex = updatedTex.replace(
-        /(\\section\{Work Experience\}[\s\S]*?\\resumeItemListStart)([\s\S]*?)(\\resumeItemListEnd)/i,
-        `$1\n${expItems}\n$3`
-      );
+    // 4. Replace Project bullets for Project 1 and Project 2
+    let p1Bullets = aiResult ? (aiResult.project1Bullets || []) : [];
+    let p2Bullets = aiResult ? (aiResult.project2Bullets || []) : [];
+    if (p1Bullets.length === 0 && p2Bullets.length === 0 && aiResult && Array.isArray(aiResult.projectBullets)) {
+      if (aiResult.projectBullets.length >= 4) {
+        p1Bullets = aiResult.projectBullets.slice(0, 2);
+        p2Bullets = aiResult.projectBullets.slice(2, 4);
+      } else if (aiResult.projectBullets.length >= 2) {
+        p1Bullets = [aiResult.projectBullets[0]];
+        p2Bullets = [aiResult.projectBullets[1]];
+      } else if (aiResult.projectBullets.length === 1) {
+        p1Bullets = [aiResult.projectBullets[0]];
+      }
     }
-
-    // 4. Replace Project bullets if provided
-    if (aiResult && Array.isArray(aiResult.projectBullets) && aiResult.projectBullets.length >= 2) {
-      const projItems = aiResult.projectBullets.map(b => `  \\resumeItem{${escapeLatex(b)}}`).join('\n');
-      updatedTex = updatedTex.replace(
-        /(\\section\{Projects\}[\s\S]*?\\resumeItemListStart)([\s\S]*?)(\\resumeItemListEnd)/i,
-        `$1\n${projItems}\n$3`
-      );
-    }
+    updatedTex = replaceProjectsSection(updatedTex, p1Bullets, p2Bullets);
 
     fs.writeFileSync(targetTex, updatedTex, 'utf8');
 
-    // Run LaTeX compiler
-    const compileCmd = `${engine} -interaction=nonstopmode -output-directory="${TAILORED_DIR}" "${targetTex}"`;
-    execSync(compileCmd, { stdio: 'ignore', timeout: 20000 });
+    // Run LaTeX compiler command
+    const compileCmd = engine.compile(targetTex, TAILORED_DIR);
+    execSync(compileCmd, { stdio: 'ignore', timeout: 30000 });
 
-    // Clean up auxiliary files
+    // Clean up auxiliary files if engine left any
     const baseName = path.basename(targetTex, '.tex');
     ['.aux', '.log', '.out', '.toc'].forEach(ext => {
       const auxFile = path.join(TAILORED_DIR, `${baseName}${ext}`);
@@ -292,6 +449,7 @@ module.exports = {
   escapeLatex,
   extractSummaryFromTex,
   getLatexEngine,
+  resolveLatexEngine,
   BASE_TEX_FILES,
   STATIC_PDFS,
   TAILORED_DIR,

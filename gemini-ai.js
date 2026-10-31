@@ -358,16 +358,20 @@ ${panelInstructions}
 ` : ''}
 Respond ONLY with valid JSON (no markdown, no code fences):
 {
-  "summary": "<2-3 sentence punchy humanized summary tailored to the JD>",
+  "summary": "<2-3 sentence punchy humanized technical summary tailored directly to this JD without AI buzzwords>",
   "highlightedSkills": ["skill1", "skill2", "skill3", "skill4", "skill5", "skill6"],
   "experienceBullets": [
     "<Bullet 1 highlighting low-level drivers / protocols / tools matching JD at Codec Technologies>",
     "<Bullet 2 highlighting testing / debugging / defect resolution with real metrics>",
     "<Bullet 3 highlighting Git / workflows / embedded documentation>"
   ],
-  "projectBullets": [
-    "<Bullet 1 highlighting firmware / system engineering matching JD>",
-    "<Bullet 2 highlighting data telemetry / cloud / analytics pipeline matching JD>"
+  "project1Bullets": [
+    "<Project 1 Bullet 1 highlighting architecture matching JD>",
+    "<Project 1 Bullet 2 highlighting protocols, robustness, or metrics matching JD>"
+  ],
+  "project2Bullets": [
+    "<Project 2 Bullet 1 highlighting telemetry / cloud / data pipeline matching JD>",
+    "<Project 2 Bullet 2 highlighting automation, containerization, or API integration matching JD>"
   ]
 }`;
 
@@ -381,12 +385,20 @@ Respond ONLY with valid JSON (no markdown, no code fences):
       const result = extractJson(raw);
 
       if (result && result.summary && result.summary.length > 40) {
+        const p1Bullets = Array.isArray(result.project1Bullets) ? result.project1Bullets : [];
+        const p2Bullets = Array.isArray(result.project2Bullets) ? result.project2Bullets : [];
+        const allProjBullets = Array.isArray(result.projectBullets) && result.projectBullets.length > 0
+          ? result.projectBullets
+          : [...p1Bullets, ...p2Bullets];
+
         return {
           summary: result.summary.trim(),
           highlightedSkills: Array.isArray(result.highlightedSkills) ? result.highlightedSkills : [],
           experienceBullets: Array.isArray(result.experienceBullets) ? result.experienceBullets : [],
-          projectBullets: Array.isArray(result.projectBullets) ? result.projectBullets : [],
-          projectFocus: category === 'embedded' ? 'AQUANOVA' : 'LabPulse',
+          project1Bullets: p1Bullets,
+          project2Bullets: p2Bullets,
+          projectBullets: allProjBullets,
+          projectFocus: category.includes('embedded') ? 'AQUANOVA' : 'LabPulse',
         };
       }
     }
@@ -401,32 +413,61 @@ Respond ONLY with valid JSON (no markdown, no code fences):
  */
 function synthesizeLocalTailoredResume({ title = '', jdText = '', category = 'embedded', cv = {} }) {
   const jdLower = jdText.toLowerCase();
-  const allSkills = category === 'embedded'
-    ? ['Embedded C', 'FreeRTOS', 'ESP32', 'ARM Cortex-M', 'UART', 'I2C', 'SPI', 'CAN Protocol', 'MQTT', 'Linux', 'Git']
-    : ['Python', 'AWS (Lambda/DynamoDB)', 'Docker', 'REST APIs', 'CI/CD Pipelines', 'Linux', 'Git', 'Data Structures'];
 
-  const matched = allSkills.filter(s => jdLower.includes(s.toLowerCase().split(' ')[0]));
-  const finalSkills = matched.length >= 3 ? matched : allSkills.slice(0, 6);
+  const pools = {
+    embedded_software: ['Embedded C (C99/C11)', 'FreeRTOS', 'ARM Cortex-M & ESP32', 'UART / SPI / I2C Drivers', 'CAN Protocol', 'HAL & State Machines (FSM)', 'GDB / Logic Analyzers', 'Git & Linux'],
+    embedded: ['Embedded C', 'FreeRTOS', 'ESP32', 'ARM Cortex-M', 'UART', 'I2C', 'SPI', 'CAN Protocol', 'MQTT', 'Linux', 'Git'],
+    data_analytics: ['Python', 'SQL (PostgreSQL/MySQL)', 'Pandas & NumPy', 'Exploratory Data Analysis (EDA)', 'Scikit-Learn & ML', 'Data Visualization (Matplotlib/Seaborn)', 'AWS Data Pipeline', 'Tableau / Power BI'],
+    python_devops: ['Python', 'AWS (Lambda/DynamoDB)', 'Docker', 'REST APIs', 'CI/CD Pipelines', 'Linux', 'Git', 'Data Structures']
+  };
+
+  const currentPool = pools[category] || pools.embedded;
+  const matched = currentPool.filter(s => jdLower.includes(s.toLowerCase().split(' ')[0]) || jdLower.includes(s.toLowerCase().split('/')[0]));
+  const finalSkills = matched.length >= 3 ? matched : currentPool.slice(0, 6);
 
   let summary = '';
   let experienceBullets = [];
-  let projectBullets = [];
+  let project1Bullets = [];
+  let project2Bullets = [];
 
-  if (category === 'embedded') {
-    summary = `Final-year Electronics and Telecommunication Engineering student at Walchand Institute of Technology (9.27 CGPA) with hands-on firmware development experience in ${finalSkills.slice(0, 4).join(', ')}. Engineered real-time sensor communication protocols and low-level firmware during an embedded internship at Codec Technologies India and IoT projects (AQUANOVA, SORTIFY). Seeking the ${title || 'Embedded Firmware Intern'} role to build robust embedded systems.`;
+  if (category === 'embedded_software') {
+    summary = `Final-year Electronics and Telecommunication Engineering student at Walchand Institute of Technology (9.27 CGPA) with hands-on expertise in Embedded C/C++, FreeRTOS, and peripheral drivers (${finalSkills.slice(0, 4).join(', ')}). Developed robust firmware architecture and low-level driver implementations during internship at Codec Technologies India and IoT systems. Seeking the ${title || 'Embedded Software Engineer'} role to build resilient firmware solutions.`;
 
     experienceBullets = [
-      `Configured and tested ${finalSkills.includes('CAN Protocol') ? 'CAN and UART' : 'UART and I2C'} communication interfaces on microcontrollers, writing Embedded C code to establish reliable data transmission between peripheral modules.`,
-      `Identified and resolved 10+ hardware interfacing and timing defects across two embedded sensor modules before production qualification.`,
-      `Managed version control with Git across active development branches, maintaining low-level driver documentation and clean firmware workflows.`
+      `Authored modular driver-level Embedded C firmware for UART and I\\textsuperscript{2}C communication peripherals, integrating circular ring buffers that eliminated packet loss.`,
+      `Programmed Hardware Abstraction Layer (HAL) routines and low-latency Interrupt Service Routines (ISRs) on ARM Cortex-M and ESP32 microcontrollers.`,
+      `Debugged bus timing bottlenecks and arbitration conflicts using logic analyzers and serial debuggers, resolving 10+ firmware defects prior to deployment.`
     ];
 
-    projectBullets = [
-      `Wrote ESP32 firmware to poll pressure and flow sensors over ADC/GPIO, publishing real-time telemetry via MQTT (QoS 1) to cloud infrastructure for automated monitoring.`,
-      `Built an analytics pipeline with Python to detect anomalous pressure fluctuations, decreasing estimated system troubleshooting time.`
+    project1Bullets = [
+      `Architected multi-threaded FreeRTOS firmware on ESP32 managing non-blocking ADC polling, queue-based IPC, and asynchronous MQTT telemetry dispatch.`,
+      `Designed resilient peripheral drivers with hardware watchdog timer monitoring and automatic failover state machines.`
     ];
-  } else {
-    summary = `Final-year Engineering student at Walchand Institute of Technology (9.27 CGPA) with hands-on proficiency in ${finalSkills.slice(0, 4).join(', ')}. Built distributed cloud telemetry agents and serverless pipelines (LabPulse) with automated Docker CI/CD workflows. Seeking the ${title || 'Python Developer'} role to engineer scalable backend and cloud solutions.`;
+
+    project2Bullets = [
+      `Developed a modular telemetry agent service in Python to monitor peripheral status and serial data streams with sub-1% CPU overhead.`,
+      `Containerized background services with Docker and configured automated CI/CD deployment pipelines using GitHub Actions.`
+    ];
+  } else if (category === 'data_analytics') {
+    summary = `Final-year Electronics and Telecommunication Engineering student at Walchand Institute of Technology (9.27 CGPA) with strong technical competence in Data Analytics, SQL, Python, and Statistical Modeling (${finalSkills.slice(0, 4).join(', ')}). Experienced in building automated ETL pipelines, performing EDA on time-series telemetry datasets, and deploying cloud analytics on AWS. Seeking the ${title || 'Data Analyst'} role to transform complex data into actionable engineering insights.`;
+
+    experienceBullets = [
+      `Designed automated data ingestion pipelines to process serial communication logs (UART, I\\textsuperscript{2}C), reducing data processing latency by 35%.`,
+      `Performed exploratory data analysis and statistical anomaly detection on device logs, identifying 10+ defect patterns.`,
+      `Structured and queried time-series device logs using SQL and Python to build automated data health reports.`
+    ];
+
+    project1Bullets = [
+      `Engineered an end-to-end data pipeline streaming user session telemetry to an AWS serverless data lake (DynamoDB, S3).`,
+      `Implemented statistical outlier detection and usage analytics in Python, processing over 10,000+ daily telemetry events with real-time error dashboards.`
+    ];
+
+    project2Bullets = [
+      `Developed an IoT telemetry analytics engine in Python (Pandas, Scikit-Learn) to predict pipeline pressure anomalies (92% accuracy).`,
+      `Cleaned and normalized real-time noisy sensor time-series data using moving-window averages and standard deviation filtering.`
+    ];
+  } else if (category === 'python_devops') {
+    summary = `Final-year Engineering student at Walchand Institute of Technology (9.27 CGPA) with hands-on proficiency in Python, AWS Serverless, Docker, and CI/CD pipelines (${finalSkills.slice(0, 4).join(', ')}). Built distributed cloud telemetry agents and serverless pipelines (LabPulse) with automated Docker CI/CD workflows. Seeking the ${title || 'Python Developer'} role to engineer scalable backend and cloud solutions.`;
 
     experienceBullets = [
       `Developed automated Python validation scripts to parse and verify communication logs from peripheral modules during internship testing.`,
@@ -434,9 +475,33 @@ function synthesizeLocalTailoredResume({ title = '', jdText = '', category = 'em
       `Collaborated using Git/GitHub workflows and automated unit testing to ensure high code reliability before deployment.`
     ];
 
-    projectBullets = [
+    project1Bullets = [
       `Engineered LabPulse, an automated background telemetry agent utilizing Python and AWS Serverless (Lambda, DynamoDB, API Gateway) for real-time metrics tracking.`,
       `Constructed containerized CI/CD deployment pipelines using Docker, automating testing and environment provisioning.`
+    ];
+
+    project2Bullets = [
+      `Engineered a real-time Python application that ingests MPU6050 accelerometer data from an Arduino via serial communication and generates spatial audio.`,
+      `Developed digital signal processing algorithms using Python (NumPy) to map physical sensor angles with minimal latency.`
+    ];
+  } else {
+    // embedded general
+    summary = `Final-year Electronics and Telecommunication Engineering student at Walchand Institute of Technology (9.27 CGPA) with hands-on firmware development experience in ${finalSkills.slice(0, 4).join(', ')}. Engineered real-time sensor communication protocols and low-level firmware during an embedded internship at Codec Technologies India and IoT projects (AQUANOVA, SORTIFY). Seeking the ${title || 'Embedded Firmware Intern'} role to build robust embedded systems.`;
+
+    experienceBullets = [
+      `Configured and tested UART and I\\textsuperscript{2}C communication interfaces on microcontrollers, writing Embedded C code to establish reliable data transmission between peripheral modules.`,
+      `Identified and resolved 10+ hardware interfacing and timing defects across two embedded sensor modules before production qualification.`,
+      `Managed version control with Git across active development branches, maintaining low-level driver documentation and clean firmware workflows.`
+    ];
+
+    project1Bullets = [
+      `Wrote ESP32 firmware to poll pressure and flow sensors over ADC/GPIO, publishing real-time telemetry via MQTT (QoS 1) to cloud infrastructure for automated monitoring.`,
+      `Built an analytics pipeline with Python to detect anomalous pressure fluctuations, decreasing estimated system troubleshooting time.`
+    ];
+
+    project2Bullets = [
+      `Designed an AI-driven waste sorting system combining computer vision, weight sensing, and vibration-based sorting to classify household waste into 4 recyclable categories.`,
+      `Integrated Raspberry Pi with camera module, weight sensor, and servo motor; automated identification, measurement, and bin control using Python and C.`
     ];
   }
 
@@ -444,8 +509,10 @@ function synthesizeLocalTailoredResume({ title = '', jdText = '', category = 'em
     summary,
     highlightedSkills: finalSkills,
     experienceBullets,
-    projectBullets,
-    projectFocus: category === 'embedded' ? 'AQUANOVA' : 'LabPulse',
+    project1Bullets,
+    project2Bullets,
+    projectBullets: [...project1Bullets, ...project2Bullets],
+    projectFocus: category.includes('embedded') ? 'AQUANOVA' : 'LabPulse',
   };
 }
 

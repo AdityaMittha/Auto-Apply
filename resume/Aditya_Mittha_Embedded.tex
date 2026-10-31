@@ -3,25 +3,21 @@
 % Author: Aditya Mittha
 %-------------------------
 
-\documentclass[letterpaper,12pt]{article}
+\documentclass[letterpaper,10pt]{article}
 
 \usepackage[utf8]{inputenc}
 \usepackage[T1]{fontenc}
-\usepackage[empty]{fullpage}
 \usepackage{titlesec}
 \usepackage[usenames,dvipsnames]{color}
 \usepackage{enumitem}
 \usepackage[hidelinks]{hyperref}
 \usepackage{geometry}
 
-% custom font: helvetica-style (from Harshibar template)
+% custom font: helvetica-style
 \usepackage{tgheros}
 \renewcommand*\familydefault{\sfdefault}
 
-% fixed width font
-% \usepackage[scale=0.90,lf]{FiraMono}
-
-\geometry{left=0.55in, right=0.55in, top=0.45in, bottom=0.45in}
+\geometry{left=0.5in, right=0.5in, top=0.35in, bottom=0.35in}
 
 \pagestyle{empty}
 
@@ -34,19 +30,35 @@
 % Section formatting — clean, ATS-parseable
 \titleformat{\section}{
   \vspace{-8pt}\bfseries\large\scshape\raggedright
-}{}{0em}{}[\color{black}\titlerule\vspace{-6pt}]
+}{}{0em}{}[\color{black}\titlerule\vspace{-5pt}]
 
 % Bullet list settings
-\newcommand{\resumeItemListStart}{\begin{itemize}[leftmargin=0.2in, topsep=2pt, parsep=0pt, itemsep=1pt]}
+\newcommand{\resumeItemListStart}{\begin{itemize}[leftmargin=0.18in, topsep=1.5pt, parsep=0pt, itemsep=1pt]}
 \newcommand{\resumeItemListEnd}{\end{itemize}\vspace{-4pt}}
 \newcommand{\resumeItem}[1]{\item\small{#1}}
+
+% Subheading macros for guaranteed right-aligned dates & metadata
+\newcommand{\resumeSubheading}[4]{
+  \vspace{-1pt}
+  \begin{tabular*}{\textwidth}[t]{l@{\extracolsep{\fill}}r}
+    \textbf{#1} & #2 \\
+    \textit{\small#3} & \textit{\small #4} \\
+  \end{tabular*}\vspace{-4pt}
+}
+
+\newcommand{\resumeProjectHeading}[2]{
+  \vspace{-1pt}
+  \begin{tabular*}{\textwidth}[t]{l@{\extracolsep{\fill}}r}
+    \textbf{#1} & #2 \\
+  \end{tabular*}\vspace{-4pt}
+}
 
 %-------------------------------------------
 \begin{document}
 
 %----------HEADING----------
 \begin{center}
-  {\LARGE \textbf{Aditya Mittha}} \\[4pt]
+  {\LARGE \textbf{Aditya Mittha}} \\[3pt]
   \small
   +91-8010542551 \enspace $|$ \enspace
   \href{mailto:adityamittha09@gmail.com}{adityamittha09@gmail.com} \enspace $|$ \enspace
@@ -67,7 +79,7 @@ Final-year Electronics and Telecommunication engineering student with hands-on e
 %-----------SKILLS-----------
 \section{Skills}
 \small
-\begin{itemize}[leftmargin=0.2in, label={}, topsep=0pt, parsep=1pt, itemsep=1pt]
+\begin{itemize}[leftmargin=0.18in, label={}, topsep=0pt, parsep=1pt, itemsep=1pt]
   \item \textbf{Programming Languages:} Embedded C, Python, Verilog, Bash/Shell Scripting
   \item \textbf{Microcontrollers \& Hardware:} ESP32, ARM-based MCUs, Raspberry Pi, Arduino, Logic Analyzer
   \item \textbf{Protocols \& Interfaces:} UART, SPI, I2C, CAN, MQTT (QoS), GPIO, ADC, Interrupts (ISR)
@@ -77,24 +89,24 @@ Final-year Electronics and Telecommunication engineering student with hands-on e
   \item \textbf{Soft Skills:} Problem Solving, Team Collaboration, Self-Learning
 \end{itemize}
 
-\vspace{-8pt}
+\vspace{-6pt}
 
 %-----------EDUCATION-----------
 \section{Education}
-\textbf{Bachelor's Degree in Electronics and Telecommunication} \hfill 2027 \\
-\textit{Walchand Institute Of Technology} \hfill CGPA: 9.27
-
-\vspace{2pt}
-
-\textbf{Higher Schooling} \hfill 2023 \\
-\textit{D.H.B Soni College, Solapur} \hfill Percentage: 83\%
+\resumeSubheading
+  {Bachelor's Degree in Electronics and Telecommunication}{2027}
+  {Walchand Institute Of Technology}{CGPA: 9.27}
+\resumeSubheading
+  {Higher Schooling}{2023}
+  {D.H.B Soni College, Solapur}{Percentage: 83\%}
 
 \vspace{-2pt}
 
 %-----------WORK EXPERIENCE-----------
 \section{Work Experience}
-\textbf{Embedded System Intern} \hfill May 2025 -- June 2025 \\
-\textit{Codec Technologies India} \hfill \textit{Remote}
+\resumeSubheading
+  {Embedded System Intern}{May 2025 -- June 2025}
+  {Codec Technologies India}{Remote}
 \resumeItemListStart
   \resumeItem{Configured and tested UART and I\textsuperscript{2}C communication interfaces on microcontrollers, writing Embedded C code to establish reliable data transmission between modules.}
   \resumeItem{Identified and resolved 10+ hardware interfacing defects across two embedded modules before production testing.}
@@ -107,7 +119,8 @@ Final-year Electronics and Telecommunication engineering student with hands-on e
 %-----------PROJECTS-----------
 \section{Projects}
 
-\textbf{AQUANOVA -- Smart Water Pressure Management for Equitable Water Supply} \hfill 2026
+\resumeProjectHeading
+  {\textbf{AQUANOVA -- Smart Water Pressure Management System}}{2026}
 \resumeItemListStart
   \resumeItem{Wrote ESP32 firmware to poll pressure and flow sensors over ADC/GPIO, publishing readings via MQTT (QoS) to Firebase cloud storage for real-time pipeline monitoring.}
   \resumeItem{Built a Python analytics pipeline with pandas, numpy, and scikit-learn's Isolation Forest --- detected leaks and pressure anomalies, reducing estimated maintenance response time.}
@@ -115,9 +128,10 @@ Final-year Electronics and Telecommunication engineering student with hands-on e
 \small{\textbf{Role:} IoT Firmware \& Cloud Integration (3-person team)} \\
 \small{\textbf{Tech Stack:} ESP32, MQTT (QoS), Firebase, ADC, Pressure/Flow Sensors, Python, Telegram/SMS alerts}
 
-\vspace{8pt}
+\vspace{3pt}
 
-\textbf{SORTIFY -- Waste Segregation System} \hfill 2025
+\resumeProjectHeading
+  {\textbf{SORTIFY -- Waste Segregation System}}{2025}
 \resumeItemListStart
   \resumeItem{Designed an AI-driven waste sorting system combining computer vision, weight sensing, and vibration-based sorting to classify household waste into 4 recyclable categories.}
   \resumeItem{Integrated Raspberry Pi with camera module, weight sensor, and servo motor; automated identification, measurement, and bin control using Python and C.}
@@ -126,20 +140,21 @@ Final-year Electronics and Telecommunication engineering student with hands-on e
 \small{\textbf{Role:} Embedded Hardware \& Raspberry Pi Integration (Hackathon, 4-person team)} \\
 \small{\textbf{Tech Stack:} Raspberry Pi, Embedded C, Python, Camera Module, HX711, Servo/PWM, Firebase, IoT Cloud}
 
-\vspace{8pt}
+\vspace{-2pt}
 
-%-------------------------------------------
+%-----------REWARDS & ACHIEVEMENTS-----------
 \section{Rewards \& Achievements}
 \resumeItemListStart
   \resumeItem{2x Winner, National Electronic Quiz Competition (Quizotronics)}
   \resumeItem{Runner-up, State-level chess championship}
   \resumeItem{Participated in 4\textsuperscript{+} Hackathons}
 \resumeItemListEnd
+
 \vspace{-4pt}
-%-----------------
+
+%-----------LANGUAGES-----------
 \section{Languages}
 \small
 English \enspace $|$ \enspace Hindi \enspace $|$ \enspace Marathi \enspace $|$ \enspace Kannada
 
-%-------------------------------------------  
 \end{document}

@@ -19,8 +19,9 @@ daily-report-preview.html
 .deploy-info
 *.pem
 
-# deps
+# deps & binaries
 node_modules/
+bin/
 
 # tailored resumes cache
 resume/tailored/

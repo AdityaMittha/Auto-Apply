@@ -69,10 +69,15 @@ else
   sudo dnf install -y nodejs
 fi
 
-# --- 4. Git ---
+# --- 4. Git & Tectonic LaTeX Engine ---
 echo ""
-echo "📂 [4/10] Installing Git..."
+echo "📂 [4/10] Installing Git & Tectonic LaTeX Engine..."
 sudo dnf install -y git
+if ! command -v tectonic &>/dev/null; then
+  echo "   Installing Tectonic TeX engine..."
+  curl --proto '=https' --tlsv1.2 -fsSL https://drop-sh.tectonic-typesetting.net | sh 2>/dev/null \
+    && sudo mv tectonic /usr/local/bin/ 2>/dev/null || true
+fi
 
 # --- 5. 2GB Swap ---
 echo ""
