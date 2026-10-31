@@ -75,8 +75,9 @@ echo "📂 [4/10] Installing Git & Tectonic LaTeX Engine..."
 sudo dnf install -y git
 if ! command -v tectonic &>/dev/null; then
   echo "   Installing Tectonic TeX engine..."
-  curl --proto '=https' --tlsv1.2 -fsSL https://drop-sh.tectonic-typesetting.net | sh 2>/dev/null \
-    && sudo mv tectonic /usr/local/bin/ 2>/dev/null || true
+  curl -L -s https://github.com/tectonic-typesetting/tectonic/releases/download/tectonic%400.17.0/tectonic-0.17.0-x86_64-unknown-linux-musl.tar.gz -o /tmp/tectonic.tar.gz \
+    && sudo tar -xzf /tmp/tectonic.tar.gz -C /usr/local/bin/ \
+    && rm -f /tmp/tectonic.tar.gz || true
 fi
 
 # --- 5. 2GB Swap ---

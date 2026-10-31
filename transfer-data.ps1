@@ -16,6 +16,9 @@ Write-Host "==========================================" -ForegroundColor Cyan
 Write-Host "Auto-Apply Data Transfer to EC2: $EC2_IP" -ForegroundColor Cyan
 Write-Host "==========================================" -ForegroundColor Cyan
 
+# 0. Ensure directories exist on remote
+ssh -o StrictHostKeyChecking=no -i $KEY_FILE "${EC2_USER}@${EC2_IP}" "mkdir -p ${REMOTE_DIR}/resume ${REMOTE_DIR}/public ${REMOTE_DIR}/docs"
+
 # 1. Code & Config & Dashboard UI
 Write-Host "`n[1/5] Uploading code (*.js, package.json, .env, public/)..." -ForegroundColor Yellow
 scp -o StrictHostKeyChecking=no -i $KEY_FILE *.js package.json .env applied-jobs.json "${EC2_USER}@${EC2_IP}:${REMOTE_DIR}/"
@@ -25,14 +28,11 @@ if (Test-Path "$repo\public") {
 if (Test-Path "$repo\docs") {
     scp -o StrictHostKeyChecking=no -r -i $KEY_FILE "$repo\docs" "${EC2_USER}@${EC2_IP}:${REMOTE_DIR}/"
 }
-if (Test-Path "$repo\.agents") {
-    scp -o StrictHostKeyChecking=no -r -i $KEY_FILE "$repo\.agents" "${EC2_USER}@${EC2_IP}:${REMOTE_DIR}/"
-}
 
 # 2. Resumes
 Write-Host "`n[2/5] Uploading resumes..." -ForegroundColor Yellow
 if (Test-Path "$repo\resume") {
-    scp -o StrictHostKeyChecking=no -r -i $KEY_FILE "$repo\resume" "${EC2_USER}@${EC2_IP}:${REMOTE_DIR}/"
+    scp -o StrictHostKeyChecking=no -i $KEY_FILE resume/*.tex resume/*.pdf "${EC2_USER}@${EC2_IP}:${REMOTE_DIR}/resume/"
 }
 
 # 3. Chrome Profiles
